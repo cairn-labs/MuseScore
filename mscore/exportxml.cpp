@@ -2417,6 +2417,9 @@ void ExportMusicXml::chord(Chord* chord, int staff, const std::vector<Lyrics*>* 
 
                   noteTag += QString(" default-x=\"%1\"").arg(QString::number(noteX - measureX,'f',2));
                   noteTag += QString(" default-y=\"%1\"").arg(QString::number(noteY - measureY,'f',2));
+
+                  QString noteUuid = note->uuid();
+                  noteTag += QString(" uuid=\"%1\"").arg(noteUuid);
                   }
 
             if (!note->visible()) {
@@ -5651,4 +5654,3 @@ void ExportMusicXml::harmony(Harmony const* const h, FretDiagram const* const fd
       }
 
 }
-

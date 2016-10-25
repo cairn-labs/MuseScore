@@ -92,6 +92,43 @@ extern void importSoundfont(QString name);
 extern bool savePositions(Score*, const QString& name, bool segments);
 extern MasterSynthesizer* synti;
 
+    // Additional classes and functions for writing element UUIDs to SVGs.
+
+    class QPainterWithIds : public QPainter {
+    public:
+        QPainterWithIds ( SvgGenerator* device ) : QPainter(device) {
+            device_ = device;
+        }
+
+        void setElementUuid(const QString& uuid) {
+            device_->setElementUuid(uuid);
+        }
+
+    private:
+        SvgGenerator* device_;
+    };
+
+    //---------------------------------------------------------
+    //   paintElement(s)Svg
+    //---------------------------------------------------------
+
+    static void paintElementSvg(QPainterWithIds& p, const Element* e)
+    {
+        QPointF pos(e->pagePos());
+        p.translate(pos);
+        p.setElementUuid(e->uuid());
+        e->draw(&p);
+        p.translate(-pos);
+    }
+
+    static void paintElementsSvg(QPainterWithIds& p, const QList<Element*>& el)
+    {
+        for (Element* e : el) {
+            if (!e->visible())
+                continue;
+            paintElementSvg(p, e);
+        }
+    }
 //---------------------------------------------------------
 //   paintElement(s)
 //---------------------------------------------------------
@@ -2570,7 +2607,7 @@ bool MuseScore::saveSvg(Score* score, const QString& saveName)
       score->setPrinting(true);
       MScore::pdfPrinting = true;
 
-      QPainter p(&printer);
+      QPainterWithIds p(&printer);
       p.setRenderHint(QPainter::Antialiasing, true);
       p.setRenderHint(QPainter::TextAntialiasing, true);
     //p.scale(mag, mag); // mag == 1 now, 1:1 scaling, the default
@@ -2613,7 +2650,7 @@ bool MuseScore::saveSvg(Score* score, const QString& saveName)
                                      && static_cast<Measure*>(mb)->visible(i)) {
                                           StaffLines* sl = static_cast<Measure*>(mb)->staffLines(i);
                                           printer.setElement(sl);
-                                          paintElement(p, sl);
+                                          paintElementSvg(p, sl);
                                           }
                                     }
                               }
@@ -2624,7 +2661,7 @@ bool MuseScore::saveSvg(Score* score, const QString& saveName)
                                                     +  lastSL->pagePos().x()
                                                     - firstSL->pagePos().x());
                               printer.setElement(firstSL);
-                              paintElement(p, firstSL);
+                              paintElementSvg(p, firstSL);
                               }
                         }
                   }
@@ -2651,7 +2688,7 @@ bool MuseScore::saveSvg(Score* score, const QString& saveName)
                   printer.setElement(e);
 
                   // Paint it
-                  paintElement(p, e);
+                  paintElementSvg(p, e);
                   }
             p.translate(QPointF(pf->width() * DPI, 0.0));
             }
@@ -2704,4 +2741,3 @@ QPixmap MuseScore::extractThumbnail(const QString& name)
       }
 
 }
-

@@ -15,6 +15,8 @@
  Implementation of Element, ElementList, StaffLines.
 */
 
+#include <uuid/uuid.h>
+
 #include "element.h"
 #include "accidental.h"
 #include "ambitus.h"
@@ -265,6 +267,18 @@ QString Element::userName() const
       return qApp->translate("elementName", elementNames[int(type())].userName);
       }
 
+
+//---------------------------------------------------------
+//   Uuid
+//---------------------------------------------------------
+void Element::makeUuid(QString* uuidStr) {
+    uuid_t cuuid;
+    uuid_generate(cuuid);
+    char uuid_c_str[37];      // ex. "1b4e28ba-2fa1-11d2-883f-0016d3cca427" + "\0"
+    uuid_unparse_lower(cuuid, uuid_c_str);
+    *uuidStr = QString(QLatin1String(uuid_c_str));
+}
+
 //---------------------------------------------------------
 //   Element
 //---------------------------------------------------------
@@ -278,6 +292,7 @@ Element::Element(Score* s) :
       _mag           = 1.0;
       _tag           = 1;
       itemDiscovered = false;
+      makeUuid(&_uuid);
       _z             = -1;
       }
 
@@ -297,6 +312,7 @@ Element::Element(const Element& e)
       _bbox       = e._bbox;
       _tag        = e._tag;
       itemDiscovered = false;
+      makeUuid(&_uuid);
       }
 
 //---------------------------------------------------------

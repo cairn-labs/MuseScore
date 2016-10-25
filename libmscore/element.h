@@ -20,6 +20,8 @@
 #include "shape.h"
 #include "property.h"
 
+typedef unsigned char uuid_t[16];
+
 class QPainter;
 
 namespace Ms {
@@ -256,6 +258,7 @@ class Element : public QObject, public ScoreElement {
   protected:
       mutable int _z;
       QColor _color;              ///< element color attribute
+      QString _uuid;
 
   public:
       //-------------------------------------------------------------------
@@ -379,6 +382,7 @@ class Element : public QObject, public ScoreElement {
       mutable QRectF _bbox;       ///< Bounding box relative to _pos + _userOff
                                   ///< valid after call to layout()
       uint _tag;                  ///< tag bitmask
+      void makeUuid(QString* uuidStr);
 
    protected:
       QPointF _startDragPosition;   ///< used during drag
@@ -411,6 +415,8 @@ class Element : public QObject, public ScoreElement {
 
       bool visible() const                    { return flag(ElementFlag::VISIBLE);  }
       virtual void setVisible(bool f)         { setFlag(ElementFlag::VISIBLE, f);   }
+
+      QString uuid() const                    { return _uuid;       }
 
       Placement placement() const             { return _placement;  }
       void setPlacement(Placement val)        { _placement = val;   }
@@ -985,4 +991,3 @@ Q_DECLARE_METATYPE(Ms::Element::Type);
 Q_DECLARE_METATYPE(Ms::Element::Placement);
 
 #endif
-
