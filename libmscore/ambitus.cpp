@@ -180,7 +180,7 @@ void Ambitus::setBottomTpc(int val)
 //   write
 //---------------------------------------------------------
 
-void Ambitus::write(Xml& xml) const
+void Ambitus::write(XmlWriter& xml) const
       {
       xml.stag("Ambitus");
       xml.tag(P_ID::HEAD_GROUP, int(_noteHeadGroup), int(NOTEHEADGROUP_DEFAULT));
@@ -284,8 +284,8 @@ void Ambitus::layout()
       if (segm && track() > -1) {
             int tick    = segm->tick();
             stf         = score()->staff(staffIdx());
-            lineDist    = stf->lineDistance() * _spatium;
-            numOfLines  = stf->lines();
+            lineDist    = stf->lineDistance(tick) * _spatium;
+            numOfLines  = stf->lines(tick);
             clf         = stf->clef(tick);
             }
       else {                              // for use in palettes
@@ -445,9 +445,10 @@ void Ambitus::draw(QPainter* p) const
 
       // draw ledger lines (if not in a palette)
       if (segment() && track() > -1) {
+            int tick          = segment()->tick();
             Staff* stf        = score()->staff(staffIdx());
-            qreal lineDist    = stf->lineDistance();
-            int numOfLines    = stf->lines();
+            qreal lineDist    = stf->lineDistance(tick);
+            int numOfLines    = stf->lines(tick);
             qreal step        = lineDist * _spatium;
             qreal stepTolerance = step * 0.1;
             qreal ledgerOffset = score()->styleS(StyleIdx::ledgerLineLength).val() * 0.5 * _spatium;
@@ -566,7 +567,7 @@ void Ambitus::updateRange()
       int   tpcTop, tpcBottom;
       int   trk;
       Measure* meas     = segment()->measure();
-      Segment* segm     = meas->findSegment(Segment::Type::ChordRest, segment()->tick());
+      Segment* segm     = meas->findSegment(SegmentType::ChordRest, segment()->tick());
       bool     stop     = meas->sectionBreak();
       while (segm) {
             // moved to another measure?
@@ -581,7 +582,7 @@ void Ambitus::updateRange()
             // scan all relevant tracks of this segment for chords
             for (trk=firstTrack; trk <= lastTrack; trk++)
                   if ( (chord=static_cast<Chord*>(segm->element(trk))) != nullptr
-                              && chord->type() == Element::Type::CHORD) {
+                              && chord->type() == ElementType::CHORD) {
                         // update pitch range (with associated tpc's)
                         foreach (Note* n, chord->notes()) {
                               if (!n->play())         // skip notes which are not to be played
@@ -720,19 +721,19 @@ QVariant Ambitus::propertyDefault(P_ID id) const
       }
 
 //---------------------------------------------------------
-//   nextElement
+//   nextSegmentElement
 //---------------------------------------------------------
 
-Element* Ambitus::nextElement()
+Element* Ambitus::nextSegmentElement()
       {
       return segment()->firstInNextSegments(staffIdx());
       }
 
 //---------------------------------------------------------
-//   prevElement
+//   prevSegmentElement
 //---------------------------------------------------------
 
-Element* Ambitus::prevElement()
+Element* Ambitus::prevSegmentElement()
       {
       return segment()->lastInPrevSegments(staffIdx());
       }
@@ -743,23 +744,10 @@ Element* Ambitus::prevElement()
 
 QString Ambitus::accessibleInfo() const
       {
-      return tr("%1; Top pitch: %2%3; Bottom pitch: %4%5").arg(Element::accessibleInfo())\
-                                                          .arg(tpc2name(topTpc(), NoteSpellingType::STANDARD, NoteCaseType::AUTO, false))\
-                                                          .arg(QString::number(topOctave()))\
-                                                          .arg(tpc2name(bottomTpc(), NoteSpellingType::STANDARD, NoteCaseType::AUTO, false))\
-                                                          .arg(QString::number(bottomOctave()));
-      }
-
-//---------------------------------------------------------
-//   screenReaderInfo
-//---------------------------------------------------------
-
-QString Ambitus::screenReaderInfo() const
-      {
-      return tr("%1; Top pitch: %2%3; Bottom pitch: %4%5").arg(Element::screenReaderInfo())\
-                                                          .arg(tpc2name(topTpc(), NoteSpellingType::STANDARD, NoteCaseType::AUTO, true))\
-                                                          .arg(QString::number(topOctave()))\
-                                                          .arg(tpc2name(bottomTpc(), NoteSpellingType::STANDARD, NoteCaseType::AUTO, true))\
+      return QObject::tr("%1; Top pitch: %2%3; Bottom pitch: %4%5").arg(Element::accessibleInfo())
+                                                          .arg(tpc2name(topTpc(), NoteSpellingType::STANDARD, NoteCaseType::AUTO, false))
+                                                          .arg(QString::number(topOctave()))
+                                                          .arg(tpc2name(bottomTpc(), NoteSpellingType::STANDARD, NoteCaseType::AUTO, false))
                                                           .arg(QString::number(bottomOctave()));
       }
 }

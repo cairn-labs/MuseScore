@@ -25,8 +25,6 @@ include_directories(
       ${CMAKE_CURRENT_BINARY_DIR}
       ${PROJECT_SOURCE_DIR}
       ${PROJECT_SOURCE_DIR}/thirdparty
-#      ${PROJECT_SOURCE_DIR}/thirdparty/freetype/include
-      ${FREETYPE_INCLUDE_DIRS}
       ${QTSINGLEAPPLICATION_INCLUDE_DIRS}
       )
 
@@ -41,12 +39,12 @@ QT5_WRAP_UI (ui_headers
       textpalette.ui  timedialog.ui symboldialog.ui  shortcutcapturedialog.ui  editdrumset.ui
       editstaff.ui timesigproperties.ui
       instrwizard.ui timesigwizard.ui newwizard.ui aboutbox.ui aboutmusicxmlbox.ui
-      transposedialog.ui lineproperties.ui excerptsdialog.ui  stafftext.ui tupletdialog.ui
+      transposedialog.ui excerptsdialog.ui  stafftext.ui tupletdialog.ui
       articulation.ui metaedit.ui palette.ui selectdialog.ui selectnotedialog.ui
       synthcontrol.ui splitstaff.ui cellproperties.ui keyedit.ui selectinstr.ui
-      fretdprops.ui editstafftype.ui sectionbreak.ui  bend.ui tremolobar.ui textproperties.ui
-      editpitch.ui editstringdata.ui editraster.ui mediadialog.ui textstyledialog.ui albummanager.ui layer.ui
-      omrpanel.ui startdialog.ui masterpalette.ui harmonyedit.ui pathlistdialog.ui
+      fretdprops.ui editstafftype.ui sectionbreak.ui  bend.ui tremolobar.ui
+      editpitch.ui editstringdata.ui editraster.ui mediadialog.ui albummanager.ui layer.ui
+      omrpanel.ui masterpalette.ui harmonyedit.ui pathlistdialog.ui
       note_groups.ui resourceManager.ui stafftypetemplates.ui
       startcenter.ui scorePreview.ui scoreBrowser.ui
       logindialog.ui uploadscoredialog.ui breaksdialog.ui
@@ -63,6 +61,7 @@ QT5_WRAP_UI (ui_headers
       debugger/accidental.ui
       debugger/clef.ui
       debugger/slursegment.ui
+      debugger/tiesegment.ui
       debugger/spanner.ui
       debugger/tremolo.ui
       debugger/beam.ui
@@ -127,15 +126,24 @@ QT5_WRAP_UI (ui_headers
       inspector/inspector_empty.ui
       inspector/inspector_fret.ui
       inspector/inspector_break.ui
+      inspector/inspector_stafftypechange.ui
       inspector/inspector_bend.ui
       inspector/inspector_arpeggio.ui
       inspector/inspector_tremolo.ui
       inspector/inspector_caesura.ui
+      inspector/inspector_bracket.ui
+      inspector/inspector_iname.ui
+      inspector/inspector_fingering.ui
+      inspector/inspector_frametext.ui
+      inspector/align_select.ui
+      inspector/offset_select.ui
+      inspector/scale_select.ui
+      inspector/size_select.ui
       ${SCRIPT_UI}
       )
 
 if (APPLE)
-      QT5_ADD_RESOURCES (qrc_files musescore.qrc musescorefonts-Mac.qrc)
+      QT5_ADD_RESOURCES (qrc_files musescore.qrc musescorefonts-Mac.qrc shortcut-Mac.qrc)
 else (APPLE)
       QT5_ADD_RESOURCES (qrc_files musescore.qrc
             musescorefonts-MScore.qrc
@@ -143,7 +151,8 @@ else (APPLE)
             musescorefonts-Bravura.qrc
             musescorefonts-MuseJazz.qrc
             musescorefonts-FreeSerif.qrc
-            musescorefonts-Free.qrc)
+            musescorefonts-Free.qrc
+            shortcut.qrc)
 endif (APPLE)
 
 
@@ -226,12 +235,14 @@ add_executable ( ${ExecutableName}
       ${INCS}
 
       recordbutton.h greendotbutton prefsdialog.h
-      scoreview.cpp editinstrument.cpp editstyle.cpp
+      scoreview.cpp editharmony.cpp editfiguredbass.cpp events.cpp
+      editinstrument.cpp editstyle.cpp
       icons.cpp importbww.cpp
       importmxml.cpp importmxmlpass1.cpp importmxmlpass2.cpp
       instrdialog.cpp instrwidget.cpp
       debugger/debugger.cpp menus.cpp
       musescore.cpp navigator.cpp pagesettings.cpp palette.cpp
+      timeline.cpp
       mixer.cpp playpanel.cpp selectionwindow.cpp preferences.cpp measureproperties.cpp
       seq.cpp textpalette.cpp
       timedialog.cpp symboldialog.cpp shortcutcapturedialog.cpp
@@ -240,36 +251,74 @@ add_executable ( ${ExecutableName}
       timesigproperties.cpp newwizard.cpp transposedialog.cpp
       excerptsdialog.cpp metaedit.cpp magbox.cpp
       capella.cpp capxml.cpp exportaudio.cpp palettebox.cpp
-      textproperties.cpp synthcontrol.cpp drumroll.cpp pianoroll.cpp piano.cpp
+      synthcontrol.cpp drumroll.cpp pianoroll.cpp piano.cpp
       pianoview.cpp drumview.cpp scoretab.cpp keyedit.cpp harmonyedit.cpp
-      updatechecker.cpp importove.cpp ove.cpp ruler.cpp
-      importgtp.cpp importgtp-gp4.cpp importgtp-gp5.cpp importgtp-gp6.cpp fotomode.cpp drumtools.cpp
-      selinstrument.cpp texteditor.cpp editstafftype.cpp texttools.cpp
+      updatechecker.cpp
+      importove.cpp
+      ove.cpp
+      ruler.cpp
+      importgtp.cpp importgtp-gp4.cpp importgtp-gp5.cpp importgtp-gp6.cpp
+      fotomode.cpp drumtools.cpp
+      selinstrument.cpp editstafftype.cpp texttools.cpp
       editpitch.cpp editstringdata.cpp editraster.cpp pianotools.cpp mediadialog.cpp
       workspace.cpp chordview.cpp
-      album.cpp albummanager.cpp
-      textstyledialog.cpp
-      lineproperties.cpp stafftextproperties.cpp splitstaff.cpp
+      albummanager.cpp
+      stafftextproperties.cpp splitstaff.cpp
       tupletdialog.cpp
-      articulationprop.cpp textprop.cpp
+      articulationprop.cpp
       fretproperties.cpp sectionbreakprop.cpp
       bendproperties.cpp tremolobarprop.cpp file.cpp keyb.cpp osc.cpp
       layer.cpp selectdialog.cpp selectnotedialog.cpp propertymenu.cpp shortcut.cpp bb.cpp
-      inspector/inspector.cpp dragelement.cpp svggenerator.cpp
-      inspector/inspectorBase.cpp inspector/inspectorBeam.cpp masterpalette.cpp
-      inspector/inspectorGroupElement.cpp dragdrop.cpp inspector/inspectorImage.cpp
+      dragelement.cpp startupWizard.cpp
+      svggenerator.cpp
+      masterpalette.cpp
+      dragdrop.cpp
+      waveview.cpp helpBrowser.cpp
+      inspector/inspector.cpp
+      inspector/inspectorBase.cpp
+      inspector/inspectorBeam.cpp
+      inspector/inspectorGroupElement.cpp
+      inspector/inspectorImage.cpp
       inspector/inspectorFret.cpp
       inspector/inspectorText.cpp
-      waveview.cpp helpBrowser.cpp inspector/inspectorLasso.cpp
-      editelement.cpp inspector/inspectorVolta.cpp inspector/inspectorOttava.cpp enableplayforwidget.cpp
+      inspector/inspectorLasso.cpp
+      inspector/inspectorBarline.cpp
+      inspector/inspectorVolta.cpp
+      inspector/inspectorOttava.cpp
       inspector/inspectorTrill.cpp
-      inspector/inspectorHairpin.cpp qmlplugin.cpp editlyrics.cpp
-      musicxmlfonthandler.cpp musicxmlsupport.cpp exportxml.cpp importxml.cpp importxmlfirstpass.cpp
-      savePositions.cpp inspector/inspectorJump.cpp inspector/inspectorMarker.cpp
-      inspector/inspectorGlissando.cpp inspector/inspectorNote.cpp inspector/inspectorAmbitus.cpp
+      inspector/inspectorHairpin.cpp
+      inspector/inspectorJump.cpp
+      inspector/inspectorMarker.cpp
+      inspector/inspectorGlissando.cpp
+      inspector/inspectorNote.cpp
+      inspector/inspectorAmbitus.cpp
       inspector/inspectorArpeggio.cpp
-      paletteBoxButton.cpp driver.cpp exportmidi.cpp noteGroups.cpp
-      pathlistdialog.cpp exampleview.cpp inspector/inspectorTextLine.cpp miconengine.cpp
+      inspector/inspectorFingering.cpp
+      inspector/inspectorTextLine.cpp
+      inspector/alignSelect.cpp
+      inspector/offsetSelect.cpp
+      inspector/scaleSelect.cpp
+      inspector/sizeSelect.cpp
+      inspector/inspectorTextBase.cpp
+      inspector/inspectorDynamic.cpp
+      inspector/inspectorElementBase.cpp
+      enableplayforwidget.cpp
+      editelement.cpp
+      qmlplugin.cpp
+      editlyrics.cpp
+      musicxmlfonthandler.cpp
+      musicxmlsupport.cpp
+      exportxml.cpp
+      importxml.cpp
+      importxmlfirstpass.cpp
+      savePositions.cpp
+      paletteBoxButton.cpp
+      driver.cpp
+      exportmidi.cpp
+      noteGroups.cpp
+      pathlistdialog.cpp
+      exampleview.cpp
+      miconengine.cpp
       importmidi/importmidi.cpp
       importmidi/importmidi_panel.cpp importmidi/importmidi_operations.cpp
       importmidi/importmidi_model.cpp importmidi/importmidi_delegate.cpp
@@ -303,7 +352,6 @@ add_executable ( ${ExecutableName}
 
 target_link_libraries(mscore
       awl
-      mstyle
       diff_match_patch
       bww
       rtf2html
@@ -318,6 +366,10 @@ target_link_libraries(mscore
       beatroot
       kqoauth
       )
+
+if (USE_SYSTEM_FREETYPE)
+      target_link_libraries(mscore ${FREETYPE_LIBRARIES})
+endif (USE_SYSTEM_FREETYPE)
 
 if (MINGW)
       set(MSCORE_OUTPUT_NAME ${MUSESCORE_NAME})
@@ -338,13 +390,13 @@ endif (MSCORE_OUTPUT_NAME)
 
 if (ZERBERUS)
       target_link_libraries(mscore zerberus synthesizer)
-endif ()
+endif (ZERBERUS)
 if (AEOLUS)
       target_link_libraries(mscore aeolus)
-endif ()
+endif (AEOLUS)
 if (SOUNDFONT3)
       target_link_libraries(mscore ${VORBIS_LIB} ${OGG_LIB})
-endif ()
+endif (SOUNDFONT3)
 
 if (HAS_AUDIOFILE)
       target_link_libraries(mscore audiofile ${SNDFILE_LIB})
@@ -358,7 +410,7 @@ if (APPLE)
       #set_target_properties (mscore
       #    PROPERTIES
       #       XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym")
-endif(APPLE)
+endif (APPLE)
 
 if (OSC)
       target_link_libraries(mscore ofqf)
@@ -376,18 +428,19 @@ if (MINGW)
       ${PROJECT_BINARY_DIR}/resfile.o
       PROPERTIES generated true
       )
+   string(TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE)
    # Windows: Add -mconsole to LINK_FLAGS to get a console window for debug output
    if(CMAKE_BUILD_TYPE MATCHES "DEBUG")
      set_target_properties( mscore
         PROPERTIES
            COMPILE_FLAGS "${PCH_INCLUDE} -g -Wall -Wextra -Winvalid-pch ${QT_DEFINITIONS} -DQT_SVG_LIB -DQT_GUI_LIB -DQT_XML_LIB -DQT_CORE_LIB"
-           LINK_FLAGS "${PROJECT_BINARY_DIR}/resfile.o -mwindows -mconsole -L ${CROSSQT}/lib"
+           LINK_FLAGS "-mwindows -mconsole -L ${CROSSQT}/lib"
         )
    else(CMAKE_BUILD_TYPE MATCHES "DEBUG")
      set_target_properties( mscore
           PROPERTIES
              COMPILE_FLAGS "${PCH_INCLUDE} -Wall -Wextra -Winvalid-pch ${QT_DEFINITIONS} -DQT_SVG_LIB -DQT_GUI_LIB -DQT_XML_LIB -DQT_CORE_LIB"
-             LINK_FLAGS "-Wl,-S ${PROJECT_BINARY_DIR}/resfile.o -mwindows -L ${CROSSQT}/lib"
+             LINK_FLAGS "-Wl,-S -mwindows -L ${CROSSQT}/lib"
           )
    endif(CMAKE_BUILD_TYPE MATCHES "DEBUG")
 
@@ -481,11 +534,17 @@ else (MINGW)
    target_link_libraries(mscore
       ${ALSA_LIB}
       ${QT_LIBRARIES}
-      mscore_freetype
       z
-      dl
+      ${CMAKE_DL_LIBS}
       pthread
       )
+
+    if (USE_SYSTEM_FREETYPE)
+         target_link_libraries(mscore freetype)
+    else (USE_SYSTEM_FREETYPE)
+         target_link_libraries(mscore mscore_freetype)
+    endif (USE_SYSTEM_FREETYPE)
+
     if (USE_PORTAUDIO)
       target_link_libraries(mscore ${PORTAUDIO_LIB})
     endif (USE_PORTAUDIO)
@@ -525,7 +584,7 @@ else (MINGW)
    # 'gold' does not use indirect shared libraries for symbol resolution, Linux only
    if (NOT APPLE)
       if(USE_JACK)
-         target_link_libraries(mscore dl)
+         target_link_libraries(mscore ${CMAKE_DL_LIBS})
       endif(USE_JACK)
       target_link_libraries(mscore rt)
    endif (NOT APPLE)
@@ -563,7 +622,14 @@ else (MINGW)
          set(MSCORE_ICON_BASE ../assets/musescore-icon-round) # Round icons on stable releases
      endif (MSCORE_UNSTABLE)
      install(FILES ${MSCORE_ICON_BASE}.svg RENAME mscore${MSCORE_INSTALL_SUFFIX}.svg DESTINATION share/icons/hicolor/scalable/apps)
+     install(FILES ${MSCORE_ICON_BASE}-16.png RENAME mscore${MSCORE_INSTALL_SUFFIX}.png DESTINATION share/icons/hicolor/16x16/apps)
+     install(FILES ${MSCORE_ICON_BASE}-24.png RENAME mscore${MSCORE_INSTALL_SUFFIX}.png DESTINATION share/icons/hicolor/24x24/apps)
+     install(FILES ${MSCORE_ICON_BASE}-32.png RENAME mscore${MSCORE_INSTALL_SUFFIX}.png DESTINATION share/icons/hicolor/32x32/apps)
+     install(FILES ${MSCORE_ICON_BASE}-48.png RENAME mscore${MSCORE_INSTALL_SUFFIX}.png DESTINATION share/icons/hicolor/48x48/apps)
      install(FILES ${MSCORE_ICON_BASE}-64.png RENAME mscore${MSCORE_INSTALL_SUFFIX}.png DESTINATION share/icons/hicolor/64x64/apps)
+     install(FILES ${MSCORE_ICON_BASE}-96.png RENAME mscore${MSCORE_INSTALL_SUFFIX}.png DESTINATION share/icons/hicolor/96x96/apps)
+     install(FILES ${MSCORE_ICON_BASE}-128.png RENAME mscore${MSCORE_INSTALL_SUFFIX}.png DESTINATION share/icons/hicolor/128x128/apps)
+     install(FILES ${MSCORE_ICON_BASE}-512.png RENAME mscore${MSCORE_INSTALL_SUFFIX}.png DESTINATION share/icons/hicolor/512x512/apps)
      # Install MIME (filetype) icons for each mimetype on Linux
      install( FILES   ../assets/mscz-icon.svg RENAME application-x-musescore${MSCORE_INSTALL_SUFFIX}.svg
         DESTINATION share/icons/hicolor/scalable/mimetypes) # SVG icon for .MSCZ files
@@ -590,7 +656,7 @@ if (APPLE)
      install (FILES
       ../fonts/gootville/GootvilleText.otf
       ../fonts/mscore/MScoreText.ttf
-      ../fonts/musejazz/MuseJazzText.ttf
+      ../fonts/musejazz/MuseJazzText.otf
       ../fonts/FreeSerif.ttf
       ../fonts/FreeSerifBold.ttf
       ../fonts/FreeSerifItalic.ttf

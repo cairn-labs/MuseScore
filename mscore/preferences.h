@@ -57,9 +57,7 @@ enum {
       };
 
 enum class MuseScoreStyleType : char {
-      DARK_OXYGEN = 0,
-      LIGHT_OXYGEN,
-      DARK_FUSION,
+      DARK_FUSION = 0,
       LIGHT_FUSION
       };
 
@@ -117,6 +115,10 @@ struct Preferences {
       int alsaFragments;
       int portaudioDevice;
       QString portMidiInput;
+      QString portMidiOutput;
+      int portMidiInputBufferCount;
+      int portMidiOutputBufferCount;
+      int portMidiOutputLatencyMilliseconds;
 
       bool antialiasedDrawing;
       SessionStart sessionStart;
@@ -173,10 +175,12 @@ struct Preferences {
       QString myTemplatesPath;
       QString myPluginsPath;
       QString mySoundfontsPath;
+      QString myShortcutPath;
 
       bool nativeDialogs;
 
       int exportAudioSampleRate;
+      int exportMp3BitRate;
 
       QString workspace;
       int exportPdfDpi;
@@ -187,7 +191,7 @@ struct Preferences {
 
       bool readPluginList();
       void writePluginList();
-      void updatePluginList();
+      void updatePluginList(bool forceRefresh=false);
 
       Preferences();
       void write();
@@ -195,8 +199,7 @@ struct Preferences {
       QColor readColor(QString key, QColor def);
       void init();
       bool readDefaultStyle();
-      bool isThemeDark() { return globalStyle == MuseScoreStyleType::DARK_OXYGEN || globalStyle == MuseScoreStyleType::DARK_FUSION;}
-      bool isOxygen() { return globalStyle == MuseScoreStyleType::DARK_OXYGEN || globalStyle == MuseScoreStyleType::LIGHT_OXYGEN;}
+      bool isThemeDark() { return globalStyle == MuseScoreStyleType::DARK_FUSION;}
       };
 
 //---------------------------------------------------------

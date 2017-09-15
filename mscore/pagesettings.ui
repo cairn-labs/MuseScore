@@ -17,7 +17,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>MuseScore: Page Settings</string>
+   <string>Page Settings</string>
   </property>
   <layout class="QGridLayout">
    <property name="leftMargin">
@@ -118,7 +118,7 @@
            </sizepolicy>
           </property>
           <property name="maximum">
-           <double>2000.000000000000000</double>
+           <double>2000000.000000000000</double>
           </property>
          </widget>
         </item>

@@ -17,7 +17,9 @@
 namespace Ms {
 
 static const char* toolbars[] = {
-      "Note Input"
+      "Note Input",
+      "File Operations",
+      "Playback Controls"
       };
 
 //---------------------------------------------------------
@@ -40,6 +42,7 @@ void MuseScore::showToolbarEditor()
 ToolbarEditor::ToolbarEditor(QWidget* parent)
    : QDialog(parent)
       {
+      setObjectName("ToolbarEditor");
       setupUi(this);
 
       for (auto i : toolbars)
@@ -52,6 +55,8 @@ ToolbarEditor::ToolbarEditor(QWidget* parent)
       connect(up, SIGNAL(clicked()), SLOT(upAction()));
       connect(down, SIGNAL(clicked()), SLOT(downAction()));
       connect(buttonBox, SIGNAL(accepted()), SLOT(accepted()));
+
+      MuseScore::restoreGeometry(this);
       }
 
 //---------------------------------------------------------
@@ -219,9 +224,23 @@ void ToolbarEditor::toolbarChanged(int tb)
             case 0:     // NoteInput
                   populateLists(MuseScore::allNoteInputMenuEntries(), mscore->noteInputMenuEntries());
                   break;
+            case 1:     //FileOperations
+                  populateLists(MuseScore::allFileOperationEntries(), mscore->fileOperationEntries());
+                  break;
+            case 2:     //PlaybackControls
+                  populateLists(MuseScore::allPlaybackControlEntries(), mscore->playbackControlEntries());
             }
       }
 
+//---------------------------------------------------------
+//   hideEvent
+//---------------------------------------------------------
+
+void ToolbarEditor::hideEvent(QHideEvent* event)
+      {
+      MuseScore::saveGeometry(this);
+      QWidget::hideEvent(event);
+      }
 
 } // namespace Ms
 

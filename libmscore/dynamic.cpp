@@ -80,12 +80,11 @@ static Dyn dynList[] = {
 //---------------------------------------------------------
 
 Dynamic::Dynamic(Score* s)
-   : Text(s)
+   : Text(SubStyle::DYNAMICS, s)
       {
       setFlags(ElementFlag::MOVABLE | ElementFlag::SELECTABLE | ElementFlag::ON_STAFF);
       _velocity = -1;
       _dynRange = Range::PART;
-      setTextStyleType(TextStyleType::DYNAMICS);
       _dynamicType  = Type::OTHER;
       }
 
@@ -110,7 +109,7 @@ int Dynamic::velocity() const
 //   write
 //---------------------------------------------------------
 
-void Dynamic::write(Xml& xml) const
+void Dynamic::write(XmlWriter& xml) const
       {
       if (!xml.canWrite(this))
             return;
@@ -139,8 +138,8 @@ void Dynamic::read(XmlReader& e)
             else if (!Text::readProperties(e))
                   e.unknown();
             }
-      if (textStyleType() == TextStyleType::DEFAULT)
-            setTextStyleType(TextStyleType::DYNAMICS);
+      if (subStyle() == SubStyle::DEFAULT)
+            initSubStyle(SubStyle::DYNAMICS);
       }
 
 //---------------------------------------------------------
@@ -152,10 +151,14 @@ void Dynamic::layout()
       if (autoplace())
             setUserOff(QPointF());
 
-      QPointF p(textStyle().offset(spatium()));
+      qreal y;
       if (placeAbove())
-            p.ry() = staff()->height() - p.ry() + lineHeight();
-      setPos(p);
+            y = score()->styleP(StyleIdx::dynamicsPosAbove);
+      else {
+            qreal sh = staff() ? staff()->height() : 0;
+            y = score()->styleP(StyleIdx::dynamicsPosBelow) + sh + lineSpacing();
+            }
+      setPos(QPointF(0.0, y));
       Text::layout1();
 
       Segment* s = segment();
@@ -196,8 +199,8 @@ void Dynamic::doAutoplace()
             return;
 
       qreal minDistance = score()->styleP(StyleIdx::dynamicsMinDistance);
-      Shape s1          = s->staffShape(staffIdx()).translated(s->pos());
-      Shape s2          = shape().translated(s->pos());
+      const Shape& s1   = s->measure()->staffShape(staffIdx());
+      Shape s2          = shape().translated(s->pos() + pos());
 
       if (placeAbove()) {
             qreal d = s2.minVerticalDistance(s1);
@@ -243,18 +246,18 @@ QString Dynamic::dynamicTypeName() const
 //   startEdit
 //---------------------------------------------------------
 
-void Dynamic::startEdit(MuseScoreView* v, const QPointF& p)
+void Dynamic::startEdit(EditData& ed)
       {
-      Text::startEdit(v, p);
+      Text::startEdit(ed);
       }
 
 //---------------------------------------------------------
 //   endEdit
 //---------------------------------------------------------
 
-void Dynamic::endEdit()
+void Dynamic::endEdit(EditData& ed)
       {
-      Text::endEdit();
+      Text::endEdit(ed);
       if (xmlText() != QString::fromUtf8(dynList[int(_dynamicType)].text))
             _dynamicType = Type::OTHER;
       }
@@ -272,7 +275,7 @@ void Dynamic::reset()
 //   drag
 //---------------------------------------------------------
 
-QRectF Dynamic::drag(EditData* ed)
+QRectF Dynamic::drag(EditData& ed)
       {
       QRectF f = Element::drag(ed);
 
@@ -283,7 +286,7 @@ QRectF Dynamic::drag(EditData* ed)
       if (km != (Qt::ShiftModifier | Qt::ControlModifier)) {
             int si       = staffIdx();
             Segment* seg = segment();
-            score()->dragPosition(ed->pos, &si, &seg);
+            score()->dragPosition(ed.pos, &si, &seg);
             if (seg != segment() || staffIdx() != si) {
                   QPointF pos1(canvasPos());
                   score()->undo(new ChangeParent(this, seg, si));
@@ -291,7 +294,7 @@ QRectF Dynamic::drag(EditData* ed)
                   layout();
                   QPointF pos2(canvasPos());
                   setUserOff(pos1 - pos2);
-                  ed->startMove = pos2;
+                  ed.startMove = pos2;
                   }
             }
       return f;
@@ -353,8 +356,8 @@ bool Dynamic::setProperty(P_ID propertyId, const QVariant& v)
 QVariant Dynamic::propertyDefault(P_ID id) const
       {
       switch(id) {
-            case P_ID::TEXT_STYLE_TYPE:
-                  return int(TextStyleType::DYNAMICS);
+            case P_ID::SUB_STYLE:
+                  return int(SubStyle::DYNAMICS);
             case P_ID::DYNAMIC_RANGE:
                   return int(Range::PART);
             case P_ID::VELOCITY:
@@ -370,7 +373,35 @@ QVariant Dynamic::propertyDefault(P_ID id) const
 
 QString Dynamic::accessibleInfo() const
       {
-      return QString("%1: %2").arg(Element::accessibleInfo()).arg(this->dynamicTypeName());
+      QString s;
+
+      if (dynamicType() == Dynamic::Type::OTHER) {
+            s = plainText().simplified();
+            if (s.length() > 20) {
+                  s.truncate(20);
+                  s += "...";
+                  }
+            }
+      else {
+            s = dynamicTypeName();
+            }
+      return QString("%1: %2").arg(Element::accessibleInfo()).arg(s);
+      }
+
+//---------------------------------------------------------
+//   screenReaderInfo
+//---------------------------------------------------------
+
+QString Dynamic::screenReaderInfo() const
+      {
+      QString s;
+
+      if (dynamicType() == Dynamic::Type::OTHER)
+            s = plainText().simplified();
+      else {
+            s = dynamicTypeName();
+            }
+      return QString("%1: %2").arg(Element::accessibleInfo()).arg(s);
       }
 
 }

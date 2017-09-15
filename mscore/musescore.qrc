@@ -1,6 +1,5 @@
 <RCC>
     <qresource prefix="/">
-        <file>data/shortcuts.xml</file>
         <file>data/icons/edit.svg</file>
         <file alias="fonts/mscore/metadata.json">../fonts/mscore/metadata.json</file>
         <file alias="fonts/gootville/metadata.json">../fonts/gootville/metadata.json</file>
@@ -12,19 +11,16 @@
         <file alias="fonts/fonts_tablature.xml">../fonts/fonts_tablature.xml</file>
         <file alias="fonts/fonts_figuredbass.xml">../fonts/fonts_figuredbass.xml</file>
         <file alias="data/instruments.xml">../share/instruments/instruments.xml</file>
-        <file alias="themes/style_light_oxygen.css">../share/themes/style_light_oxygen.css</file>
-        <file alias="themes/style_dark_oxygen.css">../share/themes/style_dark_oxygen.css</file>
         <file alias="themes/style_light_fusion.css">../share/themes/style_light_fusion.css</file>
         <file alias="themes/style_dark_fusion.css">../share/themes/style_dark_fusion.css</file>
-        <file alias="themes/palette_light_oxygen.json">../share/themes/palette_light_oxygen.json</file>
-        <file alias="themes/palette_dark_oxygen.json">../share/themes/palette_dark_oxygen.json</file>
         <file alias="themes/palette_light_fusion.json">../share/themes/palette_light_fusion.json</file>
         <file alias="themes/palette_dark_fusion.json">../share/themes/palette_dark_fusion.json</file>
         <file>data/splash.png</file>
         <file alias="data/My_First_Score.mscz">../share/templates/My_First_Score.mscz</file>
         <file alias="data/Create_New_Score.mscz">../share/templates/Create_New_Score.mscz</file>
-        <file alias="data/Empty_Score.mscz">../share/templates/01-General/00-Blank.mscz</file>
+        <file alias="data/Empty_Score.mscx">../share/templates/01-General/00-Blank.mscx</file>
         <file>data/tab_sample.mscx</file>
+        <file>data/std_sample.mscx</file>
         <file>data/style.qss</file>
         <file>data/mscore.png</file>
         <file>data/icons/window-close.svg</file>
@@ -145,6 +141,7 @@
         <file>data/icons/media-playback-pan.svg</file>
         <file>data/icons/media-playback-repeats.svg</file>
         <file>data/icons/sound-while-editing.svg</file>
+        <file>data/icons/parentheses.svg</file>
         <file>data/icons/brackets.svg</file>
         <file>data/icons/timesig_allabreve.svg</file>
         <file>data/icons/timesig_common.svg</file>

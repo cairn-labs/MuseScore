@@ -16,13 +16,10 @@
 #include "spanner.h"
 #include "mscore.h"
 
-class QPainter;
-
 namespace Ms {
 
 class SLine;
 class System;
-class MuseScoreView;
 
 //---------------------------------------------------------
 //   @@ LineSegment
@@ -35,16 +32,15 @@ class MuseScoreView;
 //---------------------------------------------------------
 
 class LineSegment : public SpannerSegment {
-      Q_OBJECT
+      Q_GADGET
 
    protected:
-      virtual void editDrag(const EditData&) override;
-      virtual bool edit(MuseScoreView*, Grip, int key, Qt::KeyboardModifiers, const QString& s) override;
-      virtual void updateGrips(Grip*, QVector<QRectF>&) const override;
-      virtual int grips() const override              { return 3; }
-      virtual void setGrip(Grip, const QPointF& p) override;
-      virtual QPointF getGrip(Grip) const override;
+      virtual void startEdit(EditData&) override;
+      virtual void editDrag(EditData&) override;
+      virtual bool edit(EditData&) override;
+      virtual void updateGrips(EditData&) const override;
       virtual QPointF gripAnchor(Grip) const override;
+      virtual void startEditDrag(EditData&) override;
 
    public:
       LineSegment(Score* s) : SpannerSegment(s) {}
@@ -70,7 +66,7 @@ class LineSegment : public SpannerSegment {
 //---------------------------------------------------------
 
 class SLine : public Spanner {
-      Q_OBJECT
+      Q_GADGET
 
       Spatium _lineWidth      { 0.15 };
       QColor _lineColor       { MScore::defaultColor };
@@ -78,6 +74,10 @@ class SLine : public Spanner {
       qreal _dashLineLen      { 5.0   };
       qreal _dashGapLen       { 5.0   };
       bool _diagonal          { false };
+
+      PropertyFlags lineWidthStyle;
+      PropertyFlags lineStyleStyle;
+      PropertyFlags lineColorStyle;
 
    protected:
       virtual QPointF linePos(Grip, System** system) const;
@@ -90,13 +90,13 @@ class SLine : public Spanner {
       virtual SpannerSegment* layoutSystem(System*) override;
 
       bool readProperties(XmlReader& node);
-      void writeProperties(Xml& xml) const;
+      void writeProperties(XmlWriter& xml) const;
       virtual LineSegment* createLineSegment() = 0;
       void setLen(qreal l);
       using Element::bbox;
       virtual const QRectF& bbox() const override;
 
-      virtual void write(Xml&) const override;
+      virtual void write(XmlWriter&) const override;
       virtual void read(XmlReader&) override;
 
       bool diagonal() const               { return _diagonal; }
@@ -123,6 +123,7 @@ class SLine : public Spanner {
       virtual QVariant getProperty(P_ID id) const override;
       virtual bool setProperty(P_ID propertyId, const QVariant&) override;
       virtual QVariant propertyDefault(P_ID id) const override;
+      virtual StyleIdx getPropertyStyle(P_ID) const override;
 
       friend class LineSegment;
       };

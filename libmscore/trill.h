@@ -15,8 +15,6 @@
 
 #include "line.h"
 
-class QPainter;
-
 namespace Ms {
 
 class Trill;
@@ -27,7 +25,7 @@ class Accidental;
 //---------------------------------------------------------
 
 class TrillSegment : public LineSegment {
-      Q_OBJECT
+      Q_GADGET
 
       std::vector<SymId> _symbols;
 
@@ -38,11 +36,11 @@ class TrillSegment : public LineSegment {
    public:
       TrillSegment(Score* s) : LineSegment(s)      {}
       Trill* trill() const                         { return (Trill*)spanner(); }
-      virtual Element::Type type() const override  { return Element::Type::TRILL_SEGMENT; }
+      virtual ElementType type() const override  { return ElementType::TRILL_SEGMENT; }
       virtual TrillSegment* clone() const override { return new TrillSegment(*this); }
       virtual void draw(QPainter*) const override;
-      virtual bool acceptDrop(const DropData&) const override;
-      virtual Element* drop(const DropData&) override;
+      virtual bool acceptDrop(EditData&) const override;
+      virtual Element* drop(EditData&) override;
       virtual void layout() override;
       virtual QVariant getProperty(P_ID propertyId) const override;
       virtual bool setProperty(P_ID propertyId, const QVariant&) override;
@@ -62,7 +60,7 @@ class TrillSegment : public LineSegment {
 //---------------------------------------------------------
 
 class Trill : public SLine {
-      Q_OBJECT
+      Q_GADGET
       Q_ENUMS(Type)
 
    public:
@@ -81,13 +79,13 @@ class Trill : public SLine {
       Trill(Score* s);
       virtual ~Trill();
       virtual Trill* clone() const override       { return new Trill(*this); }
-      virtual Element::Type type() const override { return Element::Type::TRILL; }
+      virtual ElementType type() const override { return ElementType::TRILL; }
 
       virtual void layout() override;
       virtual LineSegment* createLineSegment() override;
       virtual void add(Element*) override;
       virtual void remove(Element*) override;
-      virtual void write(Xml&) const override;
+      virtual void write(XmlWriter&) const override;
       virtual void read(XmlReader&) override;
 
       void setTrillType(const QString& s);

@@ -27,9 +27,9 @@ static QHash<void*, int> segs;
 //   saveMeasureEvents
 //---------------------------------------------------------
 
-static void saveMeasureEvents(Xml& xml, Measure* m, int offset)
+static void saveMeasureEvents(XmlWriter& xml, Measure* m, int offset)
       {
-      for (Segment* s = m->first(Segment::Type::ChordRest); s; s = s->next(Segment::Type::ChordRest)) {
+      for (Segment* s = m->first(SegmentType::ChordRest); s; s = s->next(SegmentType::ChordRest)) {
             int tick = s->tick() + offset;
             int id = segs[(void*)s];
             int time = lrint(m->score()->repeatList()->utick2utime(tick) * 1000);
@@ -53,7 +53,7 @@ bool savePositions(Score* score, const QString& name, bool segments)
             qDebug("Open <%s> failed", qPrintable(name));
             return false;
             }
-      Xml xml(&fp);
+      XmlWriter xml(score, &fp);
       xml.header();
       xml.stag("score");
       xml.stag("elements");
@@ -61,8 +61,8 @@ bool savePositions(Score* score, const QString& name, bool segments)
 
       qreal ndpi = ((qreal)converterDpi / DPI) * 12.0;
       if (segments) {
-            for (Segment* s = score->firstMeasure()->first(Segment::Type::ChordRest);
-               s; s = s->next1(Segment::Type::ChordRest)) {
+            for (Segment* s = score->firstMeasureMM()->first(SegmentType::ChordRest);
+               s; s = s->next1MM(SegmentType::ChordRest)) {
                   qreal sx   = 0;
                   int tracks = score->nstaves() * VOICES;
                   for (int track = 0; track < tracks; track++) {

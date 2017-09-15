@@ -17,19 +17,29 @@
 
 namespace Ms {
 
-class Segment;
 class Spanner;
-class System;
-class Chord;
-class ChordRest;
-class Note;
 
 //---------------------------------------------------------
 //   SpannerSegmentType
 //---------------------------------------------------------
 
-enum class SpannerSegmentType : char {
+enum class SpannerSegmentType {
       SINGLE, BEGIN, MIDDLE, END
+      };
+
+//---------------------------------------------------------
+//   SpannerEditData
+//---------------------------------------------------------
+
+class SpannerEditData : public ElementEditData {
+   public:
+      Element* editStartElement;
+      Element* editEndElement;
+      int editTick;
+      int editTick2;
+      int editTrack2;
+      QList<QPointF> userOffsets;
+      QList<QPointF> userOffsets2;
       };
 
 //---------------------------------------------------------
@@ -38,7 +48,7 @@ enum class SpannerSegmentType : char {
 //---------------------------------------------------------
 
 class SpannerSegment : public Element {
-      Q_OBJECT
+      Q_GADGET
 
       Spanner* _spanner;
       SpannerSegmentType _spannerSegmentType;
@@ -65,7 +75,7 @@ class SpannerSegment : public Element {
       bool isEndType() const                           { return spannerSegmentType() == SpannerSegmentType::END;    }
 
       void setSystem(System* s);
-      System* system() const                { return (System*)parent();   }
+      System* system() const;
 
       const QPointF& userOff2() const       { return _userOff2;       }
       void setUserOff2(const QPointF& o)    { _userOff2 = o;          }
@@ -79,8 +89,6 @@ class SpannerSegment : public Element {
       qreal& rxpos2()                       { return _p2.rx();        }
       qreal& rypos2()                       { return _p2.ry();        }
 
-      virtual void startEdit(MuseScoreView*, const QPointF&) override;
-      virtual void endEdit() override;
       virtual bool isEditable() const override { return true; }
 
       virtual QVariant getProperty(P_ID id) const override;
@@ -91,8 +99,8 @@ class SpannerSegment : public Element {
       virtual void setVisible(bool f) override;
       virtual void setColor(const QColor& col) override;
 
-      virtual Element* nextElement() override;
-      virtual Element* prevElement() override;
+      virtual Element* nextSegmentElement() override;
+      virtual Element* prevSegmentElement() override;
       virtual bool isSpannerSegment() const override { return true; }
       virtual QString accessibleInfo() const override;
       virtual void styleChanged() override;
@@ -111,19 +119,12 @@ class SpannerSegment : public Element {
 //----------------------------------------------------------------------------------
 
 class Spanner : public Element {
-      Q_OBJECT
-      Q_ENUMS(Anchor)
 
    public:
-      enum class Anchor : char {
+      enum class Anchor {
             SEGMENT, MEASURE, CHORD, NOTE
             };
    private:
-      Q_PROPERTY(Ms::Spanner::Anchor      anchor            READ anchor       WRITE setAnchor)
-      Q_PROPERTY(Ms::Element*             endElement        READ endElement)
-      Q_PROPERTY(Ms::Element*             startElement      READ startElement)
-      Q_PROPERTY(int                      tick              READ tick         WRITE setTick)
-      Q_PROPERTY(int                      tick2             READ tick2        WRITE setTick2)
 
       Element* _startElement { 0  };
       Element* _endElement   { 0  };
@@ -132,23 +133,17 @@ class Spanner : public Element {
       int _tick              { -1 };
       int _ticks             {  0 };
       int _track2            { -1 };
-
-      static QList<QPointF> userOffsets;
-      static QList<QPointF> userOffsets2;
+      bool _broken           { false };
 
    protected:
       QList<SpannerSegment*> segments;
-      // used to store spanner properties as they were at start of editing
-      // and detect edit changes when edit is over
-      static int editTick, editTick2, editTrack2;
-      static Note * editEndNote, * editStartNote;
 
    public:
       Spanner(Score* = 0);
       Spanner(const Spanner&);
       ~Spanner();
 
-      virtual Element::Type type() const = 0;
+      virtual ElementType type() const = 0;
       virtual void setScore(Score* s) override;
 
       virtual int tick() const override { return _tick;          }
@@ -159,8 +154,11 @@ class Spanner : public Element {
       void setTick2(int v);
       void setTicks(int v);
 
-      int track2() const       { return _track2;        }
-      void setTrack2(int v)    { _track2 = v;           }
+      int track2() const       { return _track2;   }
+      void setTrack2(int v)    { _track2 = v;      }
+
+      bool broken() const      { return _broken;   }
+      void setBroken(bool v)   { _broken = v;      }
 
       Anchor anchor() const    { return _anchor;   }
       void setAnchor(Anchor a) { _anchor = a;      }
@@ -174,8 +172,6 @@ class Spanner : public Element {
       virtual void add(Element*) override;
       virtual void remove(Element*) override;
       virtual void scanElements(void* data, void (*func)(void*, Element*), bool all=true) override;
-      virtual void startEdit(MuseScoreView*, const QPointF&) override;
-      virtual void endEdit() override;
       bool removeSpannerBack();
       virtual void removeUnmanaged();
       virtual void undoInsertTimeUnmanaged(int tick, int len);
@@ -212,20 +208,19 @@ class Spanner : public Element {
       virtual void setSelected(bool f) override;
       virtual void setVisible(bool f) override;
       virtual void setColor(const QColor& col) override;
-      virtual Element* nextElement() override;
-      virtual Element* prevElement() override;
+      Spanner* nextSpanner(Element* e, int activeStaff);
+      Spanner* prevSpanner(Element* e, int activeStaff);
+      virtual Element* nextSegmentElement() override;
+      virtual Element* prevSegmentElement() override;
 
       virtual bool isSpanner() const override { return true; }
 
       friend class SpannerSegment;
-#ifndef NDEBUG
-      bool broken { false };
-#endif
       };
 
 }     // namespace Ms
 
-Q_DECLARE_METATYPE(Ms::Spanner::Anchor);
+// Q_DECLARE_METATYPE(Ms::Spanner::Anchor);
 
 #endif
 

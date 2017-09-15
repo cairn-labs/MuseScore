@@ -48,7 +48,7 @@ if(POLICY CMP0046)
 endif(POLICY CMP0046)
 
 #  Look for Qt5
-SET(QT_MIN_VERSION    "5.6.0")
+SET(QT_MIN_VERSION    "5.8.0")
 # Include modules
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/build" ${CMAKE_MODULE_PATH})
 include (FindQt5)
@@ -82,7 +82,7 @@ endif (APPLE)
 # Disable components not supported on Linux/BSD
 if (NOT APPLE AND NOT MINGW)
       set(NIX_NOT_AVAIL "Not available on Linux/BSD")
-      option(BUILD_PORTMIDI "PortMidi disabled on Linux. (It uses ALSA but it's better to use ALSA directly)" OFF)
+      #option(BUILD_PORTMIDI "PortMidi disabled on Linux. (It uses ALSA but it's better to use ALSA directly)" OFF)
 endif (NOT APPLE AND NOT MINGW)
 
 option(AEOLUS        "Enable pipe organ synthesizer"      OFF)
@@ -94,6 +94,7 @@ option(OCR           "Enable OCR, requires OMR" OFF)           # Requires tesser
 option(SOUNDFONT3    "Ogg Vorbis compressed fonts" ON)         # Enable Ogg Vorbis compressed fonts, requires Ogg & Vorbis
 option(HAS_AUDIOFILE "Enable audio export" ON)                 # Requires libsndfile
 option(USE_SYSTEM_QTSINGLEAPPLICATION "Use system QtSingleApplication" OFF)
+option(USE_SYSTEM_FREETYPE "Use system FreeType" OFF)          # requires freetype >= 2.5.2, does not work on win
 option(BUILD_LAME    "Enable MP3 export" ON)                   # Requires libmp3lame (non-free), call CMake with -DBUILD_LAME="OFF" to disable
 
 SET(JACK_LONGNAME "JACK (Jack Audio Connection Kit)")
@@ -103,7 +104,8 @@ option(BUILD_PULSEAUDIO "Build with support for PulseAudio audio backend." ON)
 option(BUILD_ALSA "Build with support for ALSA audio backend." ON)
 option(BUILD_PORTAUDIO "Build with support for PortAudio audio backend." ON)
 option(BUILD_PORTMIDI "Build with support for PortAudio's MIDI features." ${BUILD_PORTAUDIO}) # PortAudio required
-option(BUILD_PCH "Build using precompiled headers." OFF)
+option(BUILD_PCH "Build using precompiled headers." ON)
+option(BUILD_FOR_WINSTORE "Build for the Windows Store." OFF)
 
 if (APPLE)
       set (CMAKE_CXX_COMPILER   clang++)
@@ -198,6 +200,29 @@ else (MINGW OR APPLE)
       SET(Mscore_SHARE_NAME    "share/")
 endif (MINGW OR APPLE)
 
+if (BUILD_FOR_WINSTORE)
+  set(FOR_WINSTORE 1)
+endif(BUILD_FOR_WINSTORE)
+
+##
+## freetype2 >= 2.5.2
+##
+
+if (USE_SYSTEM_FREETYPE)
+      if (APPLE)
+            PKGCONFIG (freetype2 2.5.2 FREETYPE_INCLUDE_DIRS FREETYPE_LIBDIR FREETYPE_LIBRARIES FREETYPE_CPP)
+            if (FREETYPE_INCLUDE_DIRS)
+                  STRING(REGEX REPLACE  "\"" "" FREETYPE_INCLUDE_DIRS ${FREETYPE_INCLUDE_DIRS})
+                  STRING(REGEX REPLACE  "\"" "" FREETYPE_LIBDIR ${FREETYPE_LIBDIR})
+                  message("freetype2 detected ${FREETYPE_INCLUDE_DIRS} ${FREETYPE_LIBDIR} ${FREETYPE_LIBRARIES}")
+            else (FREETYPE_INCLUDE_DIRS)
+                  message(FATAL_ERROR "freetype >= 2.5.2 is required\n")
+            endif (FREETYPE_INCLUDE_DIRS)
+      else (APPLE)
+            find_package(Freetype REQUIRED)
+      endif (APPLE)
+endif (USE_SYSTEM_FREETYPE)
+
 ##
 ## ALSA >= 1.0.0
 ##
@@ -272,15 +297,15 @@ IF(BUILD_JACK)
      IF(MINGW)
            set (USE_JACK 1)
            IF("$ENV{PROCESSOR_ARCHITEW6432}" STREQUAL "")
-              IF($ENV{PROCESSOR_ARCHITECTURE} STREQUAL "x86")
+              IF("$ENV{PROCESSOR_ARCHITECTURE}" STREQUAL "x86")
                  # "pure" 32-bit environment
                  set (JACK_INCDIR "$ENV{PROGRAMFILES}/Jack/includes")
                  set (JACK_LIB "$ENV{PROGRAMFILES}/Jack/lib/libjack.a")
-              ELSE($ENV{PROCESSOR_ARCHITECTURE} STREQUAL "x86")
+              ELSE("$ENV{PROCESSOR_ARCHITECTURE}" STREQUAL "x86")
                  # "pure" 64-bit environment
                  set (JACK_INCDIR "$ENV{PROGRAMFILES(x86)}/Jack/includes")
                  set (JACK_LIB "$ENV{PROGRAMFILES(x86)}/Jack/lib/libjack.a")
-              ENDIF($ENV{PROCESSOR_ARCHITECTURE} STREQUAL "x86")
+              ENDIF("$ENV{PROCESSOR_ARCHITECTURE}" STREQUAL "x86")
            ELSE("$ENV{PROCESSOR_ARCHITEW6432}" STREQUAL "")
               IF("$ENV{PROCESSOR_ARCHITECTURE}" STREQUAL "x86")
                  # 32-bit program running with an underlying 64-bit environment
@@ -519,9 +544,6 @@ add_custom_command(
     DEPENDS ${PROJECT_SOURCE_DIR}/all.h
     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
     )
-if (NOT MINGW)
-  set(BUILD_PCH true)
-endif(NOT MINGW)
 
 precompiled_header(QT_INCLUDES all ${BUILD_PCH})
 
@@ -532,12 +554,13 @@ ADD_CUSTOM_TARGET(mops2 DEPENDS ${PCH})
 ## Add subdirs
 ##
 subdirs(
-      mscore  awl bww2mxml share midi audiofile fluid mstyle libmscore synthesizer
+      mscore awl bww2mxml share midi audiofile fluid libmscore synthesizer
       effects thirdparty/rtf2html thirdparty/diff thirdparty/beatroot
       thirdparty/qzip thirdparty/kQOAuth
       )
 #      thirdparty/xmlstream
 
+string(TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE)
 if (APPLE AND CMAKE_BUILD_TYPE MATCHES "DEBUG")
 # With xcode, we need to have all the targets in the same project
 add_subdirectory(mtest)
@@ -571,8 +594,9 @@ if (OSC)
       subdirs (thirdparty/ofqf)
 endif (OSC)
 
-subdirs (thirdparty/freetype)
-
+if (NOT USE_SYSTEM_FREETYPE)
+      subdirs (thirdparty/freetype)
+endif (NOT USE_SYSTEM_FREETYPE)
 
 ##
 ## Includes
@@ -587,9 +611,13 @@ include_directories(
    ${VORBIS_INCDIR}
    ${SNDFILE_INCDIR}
    ${LAME_INCLUDE_DIR}
-#   ${FREETYPE_INCLUDE_DIRS}
-   ${PROJECT_SOURCE_DIR}/thirdparty/freetype/include
 )
+
+if (USE_SYSTEM_FREETYPE)
+      include_directories(${FREETYPE_INCLUDE_DIRS})
+else (USE_SYSTEM_FREETYPE)
+      include_directories(${PROJECT_SOURCE_DIR}/thirdparty/freetype/include)
+endif (USE_SYSTEM_FREETYPE)
 
 if (OMR)
    include_directories(${PROJECT_SOURCE_DIR}/thirdparty/poppler)
@@ -606,13 +634,15 @@ include(Packaging)
 ##  Custom target for translation generation
 ##
 
+## lupdate is used to generate the translation text files based off of the source code
+
 add_custom_target(lupdate
    COMMAND ${PROJECT_SOURCE_DIR}/build/gen-qt-projectfile ${PROJECT_SOURCE_DIR} > mscore.pro
    COMMAND Qt5::lupdate ${PROJECT_BINARY_DIR}/mscore.pro
-   COMMAND ${PROJECT_SOURCE_DIR}/build/gen-instruments-projectfile ${PROJECT_SOURCE_DIR}/share/instruments > instruments.pro
-   COMMAND Qt5::lupdate ${PROJECT_BINARY_DIR}/instruments.pro
    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
    )
+
+## lrelease is used to compile the translated text files generated by lupdate into binary resources
 
 add_custom_target(lrelease
    COMMAND Qt5::lrelease ${PROJECT_SOURCE_DIR}/share/locale/*.ts

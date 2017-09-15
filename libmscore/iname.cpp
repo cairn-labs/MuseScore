@@ -26,7 +26,7 @@ InstrumentName::InstrumentName(Score* s)
    : Text(s)
       {
       setInstrumentNameType(InstrumentNameType::SHORT);
-      _layoutPos = 0;
+      setSelectable(false);
       }
 
 //---------------------------------------------------------
@@ -59,26 +59,58 @@ void InstrumentName::setInstrumentNameType(const QString& s)
 void InstrumentName::setInstrumentNameType(InstrumentNameType st)
       {
       _instrumentNameType = st;
-      setTextStyleType(st == InstrumentNameType::SHORT ? TextStyleType::INSTRUMENT_SHORT : TextStyleType::INSTRUMENT_LONG);
+      initSubStyle(st == InstrumentNameType::SHORT ? SubStyle::INSTRUMENT_SHORT : SubStyle::INSTRUMENT_LONG);
       }
 
 //---------------------------------------------------------
-//   endEdit
+//   getProperty
 //---------------------------------------------------------
 
-void InstrumentName::endEdit()
+QVariant InstrumentName::getProperty(P_ID id) const
       {
-      Text::endEdit();
-      Part* part = staff()->part();
-      Instrument* instrument = new Instrument(*part->instrument());
+      switch (id) {
+            case P_ID::INAME_LAYOUT_POSITION:
+                  return _layoutPos;
+            default:
+                  return Text::getProperty(id);
+            }
+      }
 
-      QString s = plainText();
+//---------------------------------------------------------
+//   setProperty
+//---------------------------------------------------------
 
-      if (_instrumentNameType == InstrumentNameType::LONG)
-            instrument->setLongName(s);
-      else
-            instrument->setShortName(s);
-      score()->undo(new ChangePart(part, instrument, part->name()));
+bool InstrumentName::setProperty(P_ID id, const QVariant& v)
+      {
+      bool rv = true;
+      switch (id) {
+            case P_ID::INAME_LAYOUT_POSITION:
+                  _layoutPos = v.toInt();
+                  break;
+            default:
+                  rv = Text::setProperty(id, v);
+                  break;
+            }
+      StyleIdx sidx = getPropertyStyle(id);
+      if (sidx != StyleIdx::NOSTYLE) {
+            score()->undoChangeStyleVal(sidx, getProperty(id));
+            }
+      score()->setLayoutAll();
+      return rv;
+      }
+
+//---------------------------------------------------------
+//   propertyDefault
+//---------------------------------------------------------
+
+QVariant InstrumentName::propertyDefault(P_ID id) const
+      {
+      switch (id) {
+            case P_ID::INAME_LAYOUT_POSITION:
+                  return 0;
+            default:
+                  return Text::propertyDefault(id);
+            }
       }
 
 }

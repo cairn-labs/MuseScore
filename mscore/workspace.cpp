@@ -104,7 +104,7 @@ void MuseScore::showWorkspaceMenu()
 
 void MuseScore::createNewWorkspace()
       {
-      QString s = QInputDialog::getText(this, tr("MuseScore: Read Workspace Name"),
+      QString s = QInputDialog::getText(this, tr("Read Workspace Name"),
          tr("Workspace name:"));
       if (s.isEmpty())
             return;
@@ -120,7 +120,7 @@ void MuseScore::createNewWorkspace()
                   }
             if (!notFound) {
                   s = QInputDialog::getText(this,
-                     tr("MuseScore: Read Workspace Name"),
+                     tr("Read Workspace Name"),
                      tr("'%1' does already exist,\nplease choose a different name:").arg(s)
                      );
                   if (s.isEmpty())
@@ -237,7 +237,7 @@ void Workspace::initWorkspace()
 static void writeFailed(const QString& _path)
       {
       QString s = qApp->translate("Workspace", "Writing Workspace File\n%1\nfailed: ");
-      QMessageBox::critical(mscore, qApp->translate("Workspace", "MuseScore: Writing Workspace File"), s.arg(_path));
+      QMessageBox::critical(mscore, qApp->translate("Workspace", "Writing Workspace File"), s.arg(_path));
       }
 
 //---------------------------------------------------------
@@ -279,11 +279,11 @@ void Workspace::write()
 
       QBuffer cbuf;
       cbuf.open(QIODevice::ReadWrite);
-      Xml xml(&cbuf);
+      XmlWriter xml(gscore, &cbuf);
       xml.header();
       xml.stag("container");
       xml.stag("rootfiles");
-      xml.stag(QString("rootfile full-path=\"%1\"").arg(Xml::xmlString("workspace.xml")));
+      xml.stag(QString("rootfile full-path=\"%1\"").arg(XmlWriter::xmlString("workspace.xml")));
       xml.etag();
       for (ImageStoreItem* ip : imageStore) {
             if (!ip->isUsed(gscore))
@@ -306,8 +306,8 @@ void Workspace::write()
       {
       QBuffer cbuf;
       cbuf.open(QIODevice::ReadWrite);
-      Xml xml(&cbuf);
-      xml.clipboardmode = true;
+      XmlWriter xml(gscore, &cbuf);
+      xml.setClipboardmode(true);
       xml.header();
       xml.stag("museScore version=\"" MSC_VERSION "\"");
       xml.stag("Workspace");
@@ -378,7 +378,7 @@ void Workspace::read()
             }
 
       QByteArray ba = f.fileData(rootfile);
-      XmlReader e(ba);
+      XmlReader e(gscore, ba);
 
       while (e.readNextStartElement()) {
             if (e.name() == "museScore") {

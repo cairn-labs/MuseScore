@@ -27,17 +27,18 @@
 #include "ui_insertmeasuresdialog.h"
 #include "ui_aboutbox.h"
 #include "ui_aboutmusicxmlbox.h"
-#include "ui_startdialog.h"
 #include "singleapp/src/QtSingleApplication"
 #include "updatechecker.h"
-#include "loginmanager.h"
-#include "uploadscoredialog.h"
+// #include "loginmanager.h"
+// #include "uploadscoredialog.h"
 #include "libmscore/musescoreCore.h"
 #include "libmscore/score.h"
 #include "newwizard.h"
 
 namespace Ms {
 
+class UploadScoreDialog;
+class LoginManager;
 class Shortcut;
 class ScoreView;
 class Element;
@@ -58,7 +59,7 @@ class PaletteBox;
 class Palette;
 class PaletteScrollArea;
 class SelectionWindow;
-class Xml;
+class XmlWriter;
 class MagBox;
 class NewWizard;
 class ExcerptsDialog;
@@ -74,6 +75,7 @@ class ScriptEngine;
 class KeyEditor;
 class ChordStyleEditor;
 class Navigator;
+class Timeline;
 class PianoTools;
 class MediaDialog;
 class Workspace;
@@ -84,11 +86,13 @@ class Capella;
 class Inspector;
 class OmrPanel;
 class NScrollArea;
+class TDockWidget;
 class Sym;
 class MasterPalette;
 class PluginCreator;
 class PluginManager;
 class MasterSynthesizer;
+class SynthesizerState;
 class Driver;
 class Seq;
 class ImportMidiPanel;
@@ -170,6 +174,8 @@ class AboutMusicXMLBoxDialog : public QDialog, Ui::AboutMusicXMLBox {
 class InsertMeasuresDialog : public QDialog, public Ui::InsertMeasuresDialogBase {
       Q_OBJECT
 
+      virtual void hideEvent(QHideEvent*);
+
    private slots:
       virtual void accept();
 
@@ -191,21 +197,6 @@ class MeasuresDialog : public QDialog, public Ui::MeasuresDialogBase {
       MeasuresDialog(QWidget* parent = 0);
       };
 
-
-//---------------------------------------------------------
-//   StartDialog
-//---------------------------------------------------------
-
-class StartDialog : public QDialog, public Ui::StartDialog {
-      Q_OBJECT
-
-   private slots:
-      void createScoreClicked();
-      void loadScoreClicked();
-
-   public:
-      StartDialog(QWidget* parent = 0);
-      };
 
 //---------------------------------------------------------
 //   MuseScoreApplication (mac only)
@@ -238,11 +229,18 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       static const std::list<const char*> _advancedNoteInputMenuEntries;
       std::list<const char*> _noteInputMenuEntries { _allNoteInputMenuEntries };
 
+      static const std::list<const char*> _allFileOperationEntries;
+      std::list<const char*> _fileOperationEntries { _allFileOperationEntries };
+
+      static const std::list<const char*> _allPlaybackControlEntries;
+      std::list<const char*> _playbackControlEntries { _allPlaybackControlEntries };
+      
       QVBoxLayout* layout;    // main window layout
       QSplitter* splitter;
       ScoreTab* tab1;
       ScoreTab* tab2;
       NScrollArea* _navigator;
+      TDockWidget* _timeline;
       ImportMidiPanel* importmidiPanel     { 0 };
       QFrame* importmidiShowPanel;
       QSplitter* mainWindow;
@@ -285,6 +283,7 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       QMenu* openRecent;
       QMenu* menuEdit;
       QMenu* menuView;
+      QMenu* menuToolbars;
       QMenu* menuWorkspaces;
 
       QMenu* menuAdd;
@@ -342,7 +341,6 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       void removeMenuEntry(PluginDescription*);
 
       QTimer* autoSaveTimer;
-      QList<QAction*> qmlPluginActions;
       QList<QAction*> pluginActions;
       QSignalMapper* pluginMapper        { 0 };
 
@@ -392,10 +390,10 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
 
       QComboBox* layerSwitch;
       QComboBox* playMode;
-      QNetworkAccessManager* networkManager { 0 };
-      QAction* lastCmd                      { 0 };
-      const Shortcut* lastShortcut          { 0 };
-      QHelpEngine* _helpEngine              { 0 };
+      QNetworkAccessManager* _networkManager { 0 };
+      QAction* lastCmd                       { 0 };
+      const Shortcut* lastShortcut           { 0 };
+      QHelpEngine* _helpEngine               { 0 };
       int globalX, globalY;       // current mouse position
 
       QAction* countInAction;
@@ -439,6 +437,7 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       void showInspector(bool);
       void showOmrPanel(bool);
       void showNavigator(bool);
+      void showTimeline(bool);
       void showSelectionWindow(bool);
       void showSearchDialog();
       void showToolbarEditor();
@@ -484,6 +483,7 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       void removeTab(int);
       void removeTab();
       void clipboardChanged();
+      void inputMethodLocaleChanged();
       void endSearch();
       void saveScoreDialogFilterSelected(const QString&);
 #ifdef OSC
@@ -576,6 +576,7 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       QString lastSaveCopyDirectory;
       QString lastSaveCopyFormat;
       QString lastSaveDirectory;
+      QString lastSaveCaptureName;
       SynthControl* getSynthControl() const       { return synthControl; }
       void editInPianoroll(Staff* staff);
       void editInDrumroll(Staff* staff);
@@ -599,8 +600,10 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       Q_INVOKABLE QString revision()            {return rev;}
       Q_INVOKABLE QString version()            {return VERSION;}
       Q_INVOKABLE void newFile();
+      MasterScore* getNewFile();
       Q_INVOKABLE void loadFile(const QString& url);
       void loadFile(const QUrl&);
+      QNetworkAccessManager* networkManager();
       virtual Score* openScore(const QString& fn);
       bool hasToCheckForUpdate();
       static bool unstable();
@@ -658,11 +661,12 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       void addImage(Score*, Element*);
 
       bool savePng(Score*, const QString& name, bool screenshot, bool transparent, double convDpi, int trimMargin, QImage::Format format);
+      bool saveAudio(Score*, QIODevice *device, std::function<bool(float)> updateProgress = nullptr);
       bool saveAudio(Score*, const QString& name);
+      bool canSaveMp3();
       bool saveMp3(Score*, const QString& name);
       bool saveSvg(Score*, const QString& name);
       bool savePng(Score*, const QString& name);
-//      bool saveLilypond(Score*, const QString& name);
       bool saveMidi(Score* score, const QString& name);
 
       virtual void closeScore(Score* score);
@@ -670,9 +674,13 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       void addTempo();
       void addMetronome();
 
+      SynthesizerState synthesizerState();
+
       Q_INVOKABLE QString getLocaleISOCode() const;
       Navigator* navigator() const;
       NScrollArea* navigatorScrollArea() const { return _navigator; }
+      Timeline* timeline() const;
+      TDockWidget* timelineScrollArea() const { return _timeline; }
       QWidget*   searchDialog() const;
       SelectionWindow* getSelectionWindow() const { return selectionWindow; }
       void updateLayer();
@@ -751,8 +759,16 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       static const std::list<const char*>& advancedNoteInputMenuEntries() { return _advancedNoteInputMenuEntries; }
       std::list<const char*>* noteInputMenuEntries()                 { return &_noteInputMenuEntries; }
 
+      static const std::list<const char*>& allFileOperationEntries() { return _allFileOperationEntries; }
+      std::list<const char*>* fileOperationEntries()              { return &_fileOperationEntries; }
+
+      static const std::list<const char*>& allPlaybackControlEntries() { return _allPlaybackControlEntries; }
+      std::list<const char*>* playbackControlEntries()      { return &_playbackControlEntries; }
+
       void setNoteInputMenuEntries(std::list<const char*> l)         { _noteInputMenuEntries = l; }
       void populateNoteInputMenu();
+
+      void showError();
 
       static void saveGeometry(QWidget const*const qw);
       static void restoreGeometry(QWidget*const qw);

@@ -12,22 +12,6 @@
       <pedalY>0</pedalY>
       <trillY>0</trillY>
       <minMMRestWidth>0</minMMRestWidth>
-      <page-layout>
-        <page-height>1683.78</page-height>
-        <page-width>1190.55</page-width>
-        <page-margins type="even">
-          <left-margin>56.6929</left-margin>
-          <right-margin>56.6929</right-margin>
-          <top-margin>56.6929</top-margin>
-          <bottom-margin>113.386</bottom-margin>
-          </page-margins>
-        <page-margins type="odd">
-          <left-margin>56.6929</left-margin>
-          <right-margin>56.6929</right-margin>
-          <top-margin>56.6929</top-margin>
-          <bottom-margin>113.386</bottom-margin>
-          </page-margins>
-        </page-layout>
       <Spatium>1.76389</Spatium>
       </Style>
     <showInvisible>1</showInvisible>
@@ -45,21 +29,12 @@
     <metaTag name="translator"></metaTag>
     <metaTag name="workNumber"></metaTag>
     <metaTag name="workTitle">tst_ex</metaTag>
-    <PageList>
-      <Page>
-        <System>
-          </System>
-        <System>
-          </System>
-        </Page>
-      </PageList>
     <Part>
       <Staff id="1">
         <StaffType group="pitched">
           <name>stdNormal</name>
           </StaffType>
         <defaultClef>F</defaultClef>
-        <bracket type="-1" span="0"/>
         </Staff>
       <trackName>Trombone</trackName>
       <Instrument>
@@ -111,7 +86,6 @@
           <name>stdNormal</name>
           </StaffType>
         <defaultClef>F</defaultClef>
-        <bracket type="-1" span="0"/>
         </Staff>
       <trackName>Trombone</trackName>
       <Instrument>
@@ -163,7 +137,6 @@
           <name>stdNormal</name>
           </StaffType>
         <defaultClef>F</defaultClef>
-        <bracket type="-1" span="0"/>
         </Staff>
       <trackName>Trombone</trackName>
       <Instrument>
@@ -215,7 +188,6 @@
           <name>stdNormal</name>
           </StaffType>
         <defaultClef>F</defaultClef>
-        <bracket type="-1" span="0"/>
         </Staff>
       <trackName>Trombone</trackName>
       <Instrument>
@@ -276,7 +248,6 @@
           <lid>3</lid>
           <sigN>4</sigN>
           <sigD>4</sigD>
-          <showCourtesySig>1</showCourtesySig>
           </TimeSig>
         <HairPin id="2">
           <subtype>0</subtype>
@@ -414,7 +385,6 @@
           <lid>73</lid>
           <sigN>4</sigN>
           <sigD>4</sigD>
-          <showCourtesySig>1</showCourtesySig>
           </TimeSig>
         <Rest>
           <lid>74</lid>
@@ -557,7 +527,6 @@
           <lid>81</lid>
           <sigN>4</sigN>
           <sigD>4</sigD>
-          <showCourtesySig>1</showCourtesySig>
           </TimeSig>
         <Rest>
           <lid>87</lid>
@@ -659,7 +628,6 @@
           <lid>82</lid>
           <sigN>4</sigN>
           <sigD>4</sigD>
-          <showCourtesySig>1</showCourtesySig>
           </TimeSig>
         <Rest>
           <lid>83</lid>
@@ -727,22 +695,6 @@
       <Style>
         <lastSystemFillLimit>0</lastSystemFillLimit>
         <createMultiMeasureRests>1</createMultiMeasureRests>
-        <page-layout>
-          <page-height>1683.36</page-height>
-          <page-width>1190.88</page-width>
-          <page-margins type="even">
-            <left-margin>56.6929</left-margin>
-            <right-margin>56.6929</right-margin>
-            <top-margin>56.6929</top-margin>
-            <bottom-margin>113.386</bottom-margin>
-            </page-margins>
-          <page-margins type="odd">
-            <left-margin>56.6929</left-margin>
-            <right-margin>56.6929</right-margin>
-            <top-margin>56.6929</top-margin>
-            <bottom-margin>113.386</bottom-margin>
-            </page-margins>
-          </page-layout>
         <Spatium>1.76389</Spatium>
         </Style>
       <showInvisible>1</showInvisible>
@@ -750,14 +702,6 @@
       <showFrames>1</showFrames>
       <showMargins>0</showMargins>
       <metaTag name="partName">Trombone</metaTag>
-      <PageList>
-        <Page>
-          <System>
-            </System>
-          <System>
-            </System>
-          </Page>
-        </PageList>
       <Part>
         <Staff id="1">
           <linkedTo>1</linkedTo>
@@ -765,7 +709,6 @@
             <name>stdNormal</name>
             </StaffType>
           <defaultClef>F</defaultClef>
-          <bracket type="-1" span="0"/>
           </Staff>
         <trackName>Trombone</trackName>
         <Instrument>
@@ -830,7 +773,6 @@
             <lid>3</lid>
             <sigN>4</sigN>
             <sigD>4</sigD>
-            <showCourtesySig>1</showCourtesySig>
             </TimeSig>
           <HairPin id="3">
             <subtype>0</subtype>
@@ -971,22 +913,6 @@
       <Style>
         <lastSystemFillLimit>0</lastSystemFillLimit>
         <createMultiMeasureRests>1</createMultiMeasureRests>
-        <page-layout>
-          <page-height>1683.36</page-height>
-          <page-width>1190.88</page-width>
-          <page-margins type="even">
-            <left-margin>56.6929</left-margin>
-            <right-margin>56.6929</right-margin>
-            <top-margin>56.6929</top-margin>
-            <bottom-margin>113.386</bottom-margin>
-            </page-margins>
-          <page-margins type="odd">
-            <left-margin>56.6929</left-margin>
-            <right-margin>56.6929</right-margin>
-            <top-margin>56.6929</top-margin>
-            <bottom-margin>113.386</bottom-margin>
-            </page-margins>
-          </page-layout>
         <Spatium>1.76389</Spatium>
         </Style>
       <showInvisible>1</showInvisible>
@@ -994,14 +920,6 @@
       <showFrames>1</showFrames>
       <showMargins>0</showMargins>
       <metaTag name="partName">Trombone-1</metaTag>
-      <PageList>
-        <Page>
-          <System>
-            </System>
-          <System>
-            </System>
-          </Page>
-        </PageList>
       <Part>
         <Staff id="1">
           <linkedTo>2</linkedTo>
@@ -1009,7 +927,6 @@
             <name>stdNormal</name>
             </StaffType>
           <defaultClef>F</defaultClef>
-          <bracket type="-1" span="0"/>
           </Staff>
         <trackName>Trombone</trackName>
         <Instrument>
@@ -1074,7 +991,6 @@
             <lid>73</lid>
             <sigN>4</sigN>
             <sigD>4</sigD>
-            <showCourtesySig>1</showCourtesySig>
             </TimeSig>
           <Rest>
             <lid>74</lid>
@@ -1220,22 +1136,6 @@
       <Style>
         <lastSystemFillLimit>0</lastSystemFillLimit>
         <createMultiMeasureRests>1</createMultiMeasureRests>
-        <page-layout>
-          <page-height>1683.36</page-height>
-          <page-width>1190.88</page-width>
-          <page-margins type="even">
-            <left-margin>56.6929</left-margin>
-            <right-margin>56.6929</right-margin>
-            <top-margin>56.6929</top-margin>
-            <bottom-margin>113.386</bottom-margin>
-            </page-margins>
-          <page-margins type="odd">
-            <left-margin>56.6929</left-margin>
-            <right-margin>56.6929</right-margin>
-            <top-margin>56.6929</top-margin>
-            <bottom-margin>113.386</bottom-margin>
-            </page-margins>
-          </page-layout>
         <Spatium>1.76389</Spatium>
         </Style>
       <showInvisible>1</showInvisible>
@@ -1243,14 +1143,6 @@
       <showFrames>1</showFrames>
       <showMargins>0</showMargins>
       <metaTag name="partName">Trombone-2</metaTag>
-      <PageList>
-        <Page>
-          <System>
-            </System>
-          <System>
-            </System>
-          </Page>
-        </PageList>
       <Part>
         <Staff id="1">
           <linkedTo>3</linkedTo>
@@ -1258,7 +1150,6 @@
             <name>stdNormal</name>
             </StaffType>
           <defaultClef>F</defaultClef>
-          <bracket type="-1" span="0"/>
           </Staff>
         <trackName>Trombone</trackName>
         <Instrument>
@@ -1323,7 +1214,6 @@
             <lid>81</lid>
             <sigN>4</sigN>
             <sigD>4</sigD>
-            <showCourtesySig>1</showCourtesySig>
             </TimeSig>
           <Rest>
             <lid>87</lid>
@@ -1336,7 +1226,6 @@
           <TimeSig>
             <sigN>4</sigN>
             <sigD>4</sigD>
-            <showCourtesySig>1</showCourtesySig>
             </TimeSig>
           <Rest>
             <durationType>measure</durationType>
@@ -1440,22 +1329,6 @@
       <Style>
         <lastSystemFillLimit>0</lastSystemFillLimit>
         <createMultiMeasureRests>1</createMultiMeasureRests>
-        <page-layout>
-          <page-height>1683.36</page-height>
-          <page-width>1190.88</page-width>
-          <page-margins type="even">
-            <left-margin>56.6929</left-margin>
-            <right-margin>56.6929</right-margin>
-            <top-margin>56.6929</top-margin>
-            <bottom-margin>113.386</bottom-margin>
-            </page-margins>
-          <page-margins type="odd">
-            <left-margin>56.6929</left-margin>
-            <right-margin>56.6929</right-margin>
-            <top-margin>56.6929</top-margin>
-            <bottom-margin>113.386</bottom-margin>
-            </page-margins>
-          </page-layout>
         <Spatium>1.76389</Spatium>
         </Style>
       <showInvisible>1</showInvisible>
@@ -1463,14 +1336,6 @@
       <showFrames>1</showFrames>
       <showMargins>0</showMargins>
       <metaTag name="partName">Trombone-3</metaTag>
-      <PageList>
-        <Page>
-          <System>
-            </System>
-          <System>
-            </System>
-          </Page>
-        </PageList>
       <Part>
         <Staff id="1">
           <linkedTo>4</linkedTo>
@@ -1478,7 +1343,6 @@
             <name>stdNormal</name>
             </StaffType>
           <defaultClef>F</defaultClef>
-          <bracket type="-1" span="0"/>
           </Staff>
         <trackName>Trombone</trackName>
         <Instrument>
@@ -1543,7 +1407,6 @@
             <lid>82</lid>
             <sigN>4</sigN>
             <sigD>4</sigD>
-            <showCourtesySig>1</showCourtesySig>
             </TimeSig>
           <Rest>
             <lid>83</lid>
@@ -1556,7 +1419,6 @@
           <TimeSig>
             <sigN>4</sigN>
             <sigD>4</sigD>
-            <showCourtesySig>1</showCourtesySig>
             </TimeSig>
           <Rest>
             <durationType>measure</durationType>

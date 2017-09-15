@@ -66,8 +66,6 @@ QString dataPath;
 QIcon* icons[0];
 QString mscoreGlobalShare;
 
-
-
 //---------------------------------------------------------
 //   Preferences
 //---------------------------------------------------------
@@ -87,9 +85,10 @@ Element* MTest::writeReadElement(Element* element)
       //
       // write element
       //
+      qDebug("writeReadElement %s", element->name());
       QBuffer buffer;
       buffer.open(QIODevice::WriteOnly);
-      Xml xml(&buffer);
+      XmlWriter xml(element->score(), &buffer);
       xml.header();
       element->write(xml);
       buffer.close();
@@ -100,7 +99,7 @@ Element* MTest::writeReadElement(Element* element)
 // printf("===read <%s>===\n", element->name());
 // printf("%s\n", buffer.buffer().data());
 
-      XmlReader e(buffer.buffer());
+      XmlReader e(element->score(), buffer.buffer());
       e.readNextStartElement();
       QString tag(e.name().toString());
 // printf("read tag %s\n", qPrintable(tag));
@@ -114,6 +113,7 @@ Element* MTest::writeReadElement(Element* element)
 //---------------------------------------------------------
 
 MTest::MTest()
+   : ed(0)
       {
       MScore::testMode = true;
       }
@@ -137,7 +137,6 @@ MasterScore* MTest::readCreatedScore(const QString& name)
       MasterScore* score = new MasterScore(mscore->baseStyle());
       QFileInfo fi(name);
       score->setName(fi.completeBaseName());
-//      MScore::testMode = true;
       QString csl  = fi.suffix().toLower();
 
       Score::FileError rv;
@@ -246,13 +245,14 @@ bool MTest::saveCompareMusicXmlScore(MasterScore* score, const QString& saveName
 bool MTest::savePdf(MasterScore* cs, const QString& saveName)
       {
       QPrinter printerDev(QPrinter::HighResolution);
-      const PageFormat* pf = cs->pageFormat();
-      printerDev.setPaperSize(pf->size(), QPrinter::Inch);
+      double w = cs->styleD(StyleIdx::pageWidth);
+      double h = cs->styleD(StyleIdx::pageHeight);
+      printerDev.setPaperSize(QSizeF(w,h), QPrinter::Inch);
 
       printerDev.setCreator("MuseScore Version: " VERSION);
       printerDev.setFullPage(true);
       printerDev.setColorMode(QPrinter::Color);
-      printerDev.setDocName(cs->name());
+//      printerDev.setDocName(cs->name());
       printerDev.setOutputFormat(QPrinter::PdfFormat);
 
       printerDev.setOutputFileName(saveName);
@@ -337,6 +337,8 @@ void MTest::initMTest()
       mscore = new MScore;
       new MuseScoreCore;
       mscore->init();
+      ed.init();
+
       preferences.shortestNote = MScore::division / 4; // midi quantization: 1/16
 
       root = TESTROOT "/mtest";

@@ -19,7 +19,7 @@
 
 namespace Ms {
 
-class Xml;
+class XmlWriter;
 class Staff;
 class Score;
 class InstrumentTemplate;
@@ -44,8 +44,8 @@ class InstrumentTemplate;
 //   @P volume          int
 //---------------------------------------------------------
 
-class Part : public QObject, public ScoreElement {
-      Q_OBJECT
+class Part : public ScoreElement {
+      Q_GADGET
 
       Q_PROPERTY(int          endTrack          READ endTrack)
       Q_PROPERTY(int          harmonyCount      READ harmonyCount)
@@ -64,7 +64,7 @@ class Part : public QObject, public ScoreElement {
       Q_PROPERTY(int          startTrack        READ startTrack)
       Q_PROPERTY(int          volume            READ volume       WRITE setVolume)
 
-      QString _partName;           ///< used in tracklist (mixer)
+      QString _partName;            ///< used in tracklist (mixer)
       InstrumentList _instruments;
       QList<Staff*> _staves;
       QString _id;                  ///< used for MusicXml import
@@ -73,12 +73,11 @@ class Part : public QObject, public ScoreElement {
    public:
       Part(Score* = 0);
       void initFromInstrTemplate(const InstrumentTemplate*);
-
-      virtual const char* name() const override { return "Part"; }
+      virtual ElementType type() const override { return ElementType::PART; }
 
       void read(XmlReader&);
-      virtual bool readProperties(XmlReader&);
-      void write(Xml& xml) const;
+      bool readProperties(XmlReader&);
+      void write(XmlWriter& xml) const;
 
       int nstaves() const                       { return _staves.size(); }
       QList<Staff*>* staves()                   { return &_staves; }

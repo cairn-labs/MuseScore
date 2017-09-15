@@ -29,8 +29,6 @@
       <TextStyle>
         <halign>center</halign>
         <valign>baseline</valign>
-        <xoffset>0</xoffset>
-        <yoffset>8</yoffset>
         <offsetType>spatium</offsetType>
         <name>Dynamics</name>
         <family>FreeSerif</family>
@@ -98,14 +96,6 @@
     <metaTag name="translator"></metaTag>
     <metaTag name="workNumber"></metaTag>
     <metaTag name="workTitle"></metaTag>
-    <PageList>
-      <Page>
-        <System>
-          </System>
-        <System>
-          </System>
-        </Page>
-      </PageList>
     <Part>
       <Staff id="1">
         <StaffType group="percussion">
@@ -262,7 +252,7 @@
           <stem>1</stem>
           </Drum>
         <Drum pitch="56">
-          <head>triangle</head>
+          <head>triangle-down</head>
           <line>1</line>
           <voice>0</voice>
           <name>Ride (Bell)</name>
@@ -539,7 +529,7 @@
           <Note>
             <pitch>56</pitch>
             <tpc>22</tpc>
-            <head>triangle</head>
+            <head>triangle-down</head>
             </Note>
           </Chord>
         <Chord>
@@ -578,8 +568,6 @@
           <durationType>half</durationType>
           </Rest>
         <BarLine>
-          <subtype>end</subtype>
-          <span>1</span>
           </BarLine>
         </Measure>
       </Staff>

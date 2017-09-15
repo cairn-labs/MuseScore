@@ -22,6 +22,7 @@
 #include "tempo.h"
 #include "xml.h"
 #include "system.h"
+#include "stafftypechange.h"
 
 namespace Ms {
 
@@ -111,7 +112,8 @@ void MeasureBase::scanElements(void* data, void (*func)(void*, Element*), bool a
                         e->scanElements(data, func, all);
                   }
             }
-      func(data, this);
+      if (isBox())
+            func(data, this);
       }
 
 //---------------------------------------------------------
@@ -150,6 +152,9 @@ void MeasureBase::add(Element* e)
                         setNoBreak(true);
                         break;
                   }
+            if (next())
+                  score()->setLayout(next()->endTick());
+//            score()->setLayoutAll();     // TODO
             }
       triggerLayout();
       _el.push_back(e);
@@ -173,7 +178,7 @@ void MeasureBase::remove(Element* el)
                         break;
                   case LayoutBreak::SECTION:
                         setSectionBreak(false);
-                        score()->setPause(endTick(), 0);
+                        score()->setPause(endTick()-1, 0);
                         score()->setLayoutAll();
                         break;
                   case LayoutBreak::NOBREAK:
@@ -382,18 +387,21 @@ void MeasureBase::undoSetBreak(bool v, LayoutBreak::Type type)
             case LayoutBreak::LINE:
                   if (lineBreak() == v)
                         return;
+                  setLineBreak(v);
                   break;
             case LayoutBreak::PAGE:
                   if (pageBreak() == v)
                         return;
                   if (v && lineBreak())
                         setLineBreak(false);
+                  setPageBreak(v);
                   break;
             case LayoutBreak::SECTION:
                   if (sectionBreak() == v)
                         return;
                   if (v && lineBreak())
                         setLineBreak(false);
+                  setSectionBreak(v);
                   break;
             case LayoutBreak::NOBREAK:
                   if (noBreak() == v)
@@ -403,6 +411,7 @@ void MeasureBase::undoSetBreak(bool v, LayoutBreak::Type type)
                         setPageBreak(false);
                         setSectionBreak(false);
                         }
+                  setNoBreak(v);
                   break;
             }
 
@@ -473,7 +482,7 @@ MeasureBase* MeasureBase::nextMM() const
 //   writeProperties
 //---------------------------------------------------------
 
-void MeasureBase::writeProperties(Xml& xml) const
+void MeasureBase::writeProperties(XmlWriter& xml) const
       {
       Element::writeProperties(xml);
       for (const Element* e : el())
@@ -515,6 +524,13 @@ bool MeasureBase::readProperties(XmlReader& e)
                   }
             else
                   delete lb;
+            }
+      else if (tag == "StaffTypeChange") {
+            StaffTypeChange* stc = new StaffTypeChange(score());
+            stc->setTrack(e.track());
+            stc->setParent(this);
+            stc->read(e);
+            add(stc);
             }
       else if (Element::readProperties(e))
             ;

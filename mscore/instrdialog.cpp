@@ -20,6 +20,7 @@
 
 #include "instrdialog.h"
 #include "musescore.h"
+#include "preferences.h"
 #include "scoreview.h"
 #include "seq.h"
 #include "libmscore/barline.h"
@@ -34,6 +35,7 @@
 #include "libmscore/staff.h"
 #include "libmscore/stafftype.h"
 #include "libmscore/undo.h"
+#include "libmscore/bracketItem.h"
 
 namespace Ms {
 
@@ -71,9 +73,11 @@ void InstrumentsDialog::on_saveButton_clicked()
       {
       QString name = QFileDialog::getSaveFileName(
          this,
-         tr("MuseScore: Save Instrument List"),
+         tr("Save Instrument List"),
          ".",
-         tr("MuseScore Instruments") + " (*.xml)"
+         tr("MuseScore Instruments") + " (*.xml)",
+         0,
+         preferences.nativeDialogs ? QFileDialog::Options() : QFileDialog::DontUseNativeDialog
          );
       if (name.isEmpty())
             return;
@@ -86,23 +90,23 @@ void InstrumentsDialog::on_saveButton_clicked()
       if (!f.open(QIODevice::WriteOnly)) {
             QString s = tr("Open Instruments File\n%1\nfailed: ")
                + QString(strerror(errno));
-            QMessageBox::critical(mscore, tr("MuseScore: Open Instruments File"), s.arg(f.fileName()));
+            QMessageBox::critical(mscore, tr("Open Instruments File"), s.arg(f.fileName()));
             return;
             }
 
-      Xml xml(&f);
+      XmlWriter xml(0, &f);
       xml.header();
       xml.stag("museScore version=\"" MSC_VERSION "\"");
-      foreach(InstrumentGroup* g, instrumentGroups) {
+      for (InstrumentGroup* g : instrumentGroups) {
             xml.stag(QString("InstrumentGroup name=\"%1\" extended=\"%2\"").arg(g->name).arg(g->extended));
-            foreach(InstrumentTemplate* t, g->instrumentTemplates)
+            for (InstrumentTemplate* t : g->instrumentTemplates)
                   t->write(xml);
             xml.etag();
             }
       xml.etag();
       if (f.error() != QFile::NoError) {
-            QString s = tr("Write Style failed: ") + f.errorString();
-            QMessageBox::critical(this, tr("MuseScore: Write Style"), s);
+            QString s = tr("Write Instruments File failed: ") + f.errorString();
+            QMessageBox::critical(this, tr("Write Instruments File"), s);
             }
       }
 
@@ -113,16 +117,18 @@ void InstrumentsDialog::on_saveButton_clicked()
 void InstrumentsDialog::on_loadButton_clicked()
       {
       QString fn = QFileDialog::getOpenFileName(
-         this, tr("MuseScore: Load Instrument List"),
+         this, tr("Load Instrument List"),
           mscoreGlobalShare + "/templates",
-         tr("MuseScore Instruments") + " (*.xml)"
+         tr("MuseScore Instruments") + " (*.xml)",
+         0,
+         preferences.nativeDialogs ? QFileDialog::Options() : QFileDialog::DontUseNativeDialog
          );
       if (fn.isEmpty())
             return;
       QFile f(fn);
       if (!loadInstrumentTemplates(fn)) {
             QMessageBox::warning(0,
-               QWidget::tr("MuseScore: Load Style Failed"),
+               QWidget::tr("Load Style Failed"),
                QString(strerror(errno)),
                QString::null, QWidget::tr("Quit"), QString::null, 0, 1);
             return;
@@ -200,10 +206,10 @@ void MuseScore::editInstrList()
 
       // keep the keylist of the first pitched staff to apply it to new ones
       KeyList tmpKeymap;
-      Staff* firstStaff = nullptr;
+      Staff* firstStaff = 0;
       for (Staff* s : masterScore->staves()) {
             KeyList* km = s->keyList();
-            if (!s->isDrumStaff()) {
+            if (!s->isDrumStaff(0)) {     // TODO
                   tmpKeymap.insert(km->begin(), km->end());
                   firstStaff = s;
                   break;
@@ -280,8 +286,6 @@ void MuseScore::editInstrList()
                               linked.append(staff);
                               }
                         }
-                  if (linked.size() == 0)
-                        part->staves()->front()->setBarLineSpan(part->nstaves());
 
                   //insert keysigs
                   int sidx = masterScore->staffIdx(part);
@@ -318,7 +322,6 @@ void MuseScore::editInstrList()
 
                               Staff* linkedStaff = 0;
                               if (sli->linked()) {
-
                                     if (rstaff > 0)
                                           linkedStaff = part->staves()->front();
                                     else {
@@ -356,7 +359,7 @@ void MuseScore::editInstrList()
                               const StaffType* stfType = sli->staffType();
 
                               // use selected staff type
-                              if (stfType->name() != staff->staffType()->name())
+                              if (stfType->name() != staff->staffType(0)->name())
                                     masterScore->undo(new ChangeStaffType(staff, *stfType));
                               }
                         else {
@@ -463,11 +466,9 @@ void MuseScore::editInstrList()
                   --curSpan;
 
                   // update brackets
-                  QList<BracketItem> brackets = staff->brackets();
-                  int nn = brackets.size();
-                  for (int ii = 0; ii < nn; ++ii) {
-                        if ((brackets[ii]._bracket != BracketType::NO_BRACKET) && (brackets[ii]._bracketSpan > (n - i)))
-                              s->undoChangeBracketSpan(staff, ii, n - i);
+                  for (BracketItem* bi : staff->brackets()) {
+                        if ((bi->bracketSpan() > (n - i)))
+                              bi->undoChangeProperty(P_ID::BRACKET_SPAN, n - i);
                         }
                   }
             }
@@ -476,7 +477,7 @@ void MuseScore::editInstrList()
       // there should be at least one measure
       //
       if (masterScore->measures()->size() == 0)
-            masterScore->insertMeasure(Element::Type::MEASURE, 0, false);
+            masterScore->insertMeasure(ElementType::MEASURE, 0, false);
 
       for (Excerpt* excerpt : masterScore->excerpts()) {
             QList<Staff*> sl       = excerpt->partScore()->staves();

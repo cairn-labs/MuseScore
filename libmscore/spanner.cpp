@@ -22,14 +22,6 @@
 
 namespace Ms {
 
-int   Spanner::editTick;
-int   Spanner::editTick2;
-int   Spanner::editTrack2;
-Note* Spanner::editEndNote;
-Note* Spanner::editStartNote;
-QList<QPointF> Spanner::userOffsets2;
-QList<QPointF> Spanner::userOffsets;
-
 //---------------------------------------------------------
 //   SpannerSegment
 //---------------------------------------------------------
@@ -50,21 +42,12 @@ SpannerSegment::SpannerSegment(const SpannerSegment& s)
       }
 
 //---------------------------------------------------------
-//   startEdit
+//   system
 //---------------------------------------------------------
 
-void SpannerSegment::startEdit(MuseScoreView*s , const QPointF& p)
+System* SpannerSegment::system() const
       {
-      spanner()->startEdit(s, p);
-      }
-
-//---------------------------------------------------------
-//   endEdit
-//---------------------------------------------------------
-
-void SpannerSegment::endEdit()
-      {
-      spanner()->endEdit();
+      return toSystem(parent());
       }
 
 //---------------------------------------------------------
@@ -95,7 +78,6 @@ QVariant SpannerSegment::getProperty(P_ID id) const
                   return spanner()->getProperty(id);
             case P_ID::USER_OFF2:
                   return _userOff2;
-
             default:
                   return Element::getProperty(id);
             }
@@ -172,7 +154,7 @@ void SpannerSegment::setVisible(bool f)
             _spanner->setVisible(f);
             }
       else
-            setVisible(f);
+            Element::setVisible(f);
       }
 
 //---------------------------------------------------------
@@ -191,21 +173,21 @@ void SpannerSegment::setColor(const QColor& col)
       }
 
 //---------------------------------------------------------
-//   nextElement
+//   nextSegmentElement
 //---------------------------------------------------------
 
-Element* SpannerSegment::nextElement()
+Element* SpannerSegment::nextSegmentElement()
       {
-      return spanner()->nextElement();
+      return spanner()->nextSegmentElement();
       }
 
 //---------------------------------------------------------
-//   prevElement
+//   prevSegmentElement
 //---------------------------------------------------------
 
-Element* SpannerSegment::prevElement()
+Element* SpannerSegment::prevSegmentElement()
       {
-      return spanner()->prevElement();
+      return spanner()->prevSegmentElement();
       }
 
 //---------------------------------------------------------
@@ -381,77 +363,6 @@ void Spanner::setScore(Score* s)
       }
 
 //---------------------------------------------------------
-//   startEdit
-//---------------------------------------------------------
-
-void Spanner::startEdit(MuseScoreView*, const QPointF&)
-      {
-      editTick   = _tick;
-      editTick2  = tick2();
-      editTrack2 = _track2;
-      if (_anchor == Spanner::Anchor::NOTE) {
-            editEndNote       = static_cast<Note*>(_endElement);
-            editStartNote     = static_cast<Note*>(_startElement);
-            }
-
-      userOffsets.clear();
-      userOffsets2.clear();
-      foreach (SpannerSegment* ss, spannerSegments()) {
-            userOffsets.push_back(ss->userOff());
-            userOffsets2.push_back(ss->userOff2());
-            }
-      }
-
-//---------------------------------------------------------
-//   endEdit
-//---------------------------------------------------------
-
-void Spanner::endEdit()
-      {
-      bool rebuild = false;
-      if (_anchor == Spanner::Anchor::NOTE) {
-            if (_endElement != editEndNote || _startElement != editStartNote) {
-                  // swap original anchor elements into the spanner
-                  // and set the new one via an undoable operation
-                  Note* newStartNote      = static_cast<Note*>(_startElement);
-                  Note* newEndNote        = static_cast<Note*>(_endElement);
-                  _startElement           = editStartNote;
-                  _endElement             = editEndNote;
-                  score()->undo(new ChangeSpannerElements(this, newStartNote, newEndNote));
-                  }
-            }
-      else {
-            if (editTick != tick()) {
-                  score()->undoPropertyChanged(this, P_ID::SPANNER_TICK, editTick);
-                  rebuild = true;
-                  }
-            // ticks may also change by moving initial anchor, without moving ending anchor
-            if (editTick2 != tick2() || editTick2 - editTick != tick2() - tick()) {
-                  score()->undoPropertyChanged(this, P_ID::SPANNER_TICKS, editTick2 - editTick);
-                  rebuild = true;
-                  }
-            if (editTrack2 != track2()) {
-                  score()->undoPropertyChanged(this, P_ID::SPANNER_TRACK2, editTrack2);
-                  rebuild = true;
-                  }
-            }
-
-      if (rebuild)
-            score()->rebuildBspTree();
-
-      if (spannerSegments().size() != userOffsets2.size()) {
-            qDebug("Spanner::endEdit(): segment size changed");
-            return;
-            }
-
-      for (int i = 0; i < userOffsets2.size(); ++i) {
-            SpannerSegment* ss = segments[i];
-            score()->undoPropertyChanged(ss, P_ID::USER_OFF, userOffsets[i]);
-            score()->undoPropertyChanged(ss, P_ID::USER_OFF2, userOffsets2[i]);
-            }
-      }
-
-//---------------------------------------------------------
 //   getProperty
 //---------------------------------------------------------
 
@@ -481,27 +392,30 @@ bool Spanner::setProperty(P_ID propertyId, const QVariant& v)
       switch (propertyId) {
             case P_ID::SPANNER_TICK:
                   setTick(v.toInt());
+                  setStartElement(0);     // invalidate
+                  setEndElement(0);       //
+                  if (score() && score()->spannerMap().removeSpanner(this))
+                        score()->addSpanner(this);
                   break;
             case P_ID::SPANNER_TICKS:
                   setTicks(v.toInt());
+                  setEndElement(0);       // invalidate
                   break;
             case P_ID::TRACK:
                   setTrack(v.toInt());
-                  setStartElement(0);
+                  setStartElement(0);     // invalidate
                   break;
             case P_ID::SPANNER_TRACK2:
                   setTrack2(v.toInt());
-                  setEndElement(0);
+                  setEndElement(0);       // invalidate
                   break;
             case P_ID::ANCHOR:
                   setAnchor(Anchor(v.toInt()));
                   break;
             default:
-                  if (!Element::setProperty(propertyId, v))
-                        return false;
-                  break;
+                  return Element::setProperty(propertyId, v);
             }
-      score()->setLayoutAll();
+      triggerLayout();
       return true;
       }
 
@@ -528,7 +442,7 @@ void Spanner::computeStartElement()
       {
       switch (_anchor) {
             case Anchor::SEGMENT: {
-                  Segment* seg = score()->tick2segmentMM(tick(), false, Segment::Type::ChordRest);
+                  Segment* seg = score()->tick2segmentMM(tick(), false, SegmentType::ChordRest);
                   int strack = (track() / VOICES) * VOICES;
                   int etrack = strack + VOICES;
                   _startElement = 0;
@@ -581,7 +495,7 @@ void Spanner::computeEndElement()
                         if (qAbs(_ticks - nticks) > fudge) {
                               qDebug("%s ticks changed, %d -> %d", name(), _ticks, nticks);
                               setTicks(nticks);
-                              if (type() == Element::Type::OTTAVA)
+                              if (type() == ElementType::OTTAVA)
                                     staff()->updateOttava();
                               }
                         }
@@ -621,10 +535,12 @@ Note* Spanner::startElementFromSpanner(Spanner* sp, Element* newEnd)
 
       Note*  oldStart   = static_cast<Note*>(sp->startElement());
       Note*  oldEnd     = static_cast<Note*>(sp->endElement());
+      if (oldStart == nullptr || oldEnd == nullptr)
+            return nullptr;
       Note*  newStart   = nullptr;
       Score* score      = newEnd->score();
       // determine the track where to expect the 'parallel' start element
-      int   newTrack    = newEnd->track() + (oldEnd->track() - oldStart->track());
+      int   newTrack    = (newEnd->track() - oldEnd->track()) + oldStart->track();
       // look in notes linked to oldStart for a note with the
       // same score as new score and appropriate track
       for (ScoreElement* newEl : oldStart->linkList())
@@ -653,6 +569,8 @@ Note* Spanner::endElementFromSpanner(Spanner* sp, Element* newStart)
 
       Note*  oldStart   = static_cast<Note*>(sp->startElement());
       Note*  oldEnd     = static_cast<Note*>(sp->endElement());
+      if (oldStart == nullptr || oldEnd == nullptr)
+            return nullptr;
       Note*  newEnd     = nullptr;
       Score* score      = newStart->score();
       // determine the track where to expect the 'parallel' start element
@@ -698,7 +616,7 @@ Chord* Spanner::startChord()
       Q_ASSERT(_anchor == Anchor::CHORD);
       if (!_startElement)
             _startElement = score()->findCR(tick(), track());
-      Q_ASSERT(_startElement->type() == Element::Type::CHORD);
+      Q_ASSERT(_startElement->type() == ElementType::CHORD);
       return static_cast<Chord*>(_startElement);
       }
 
@@ -710,10 +628,10 @@ Chord* Spanner::endChord()
       {
       Q_ASSERT(_anchor == Anchor::CHORD);
 
-      if (!_endElement && type() == Element::Type::SLUR) {
-            Segment* s = score()->tick2segmentMM(tick2(), false, Segment::Type::ChordRest);
+      if (!_endElement && type() == ElementType::SLUR) {
+            Segment* s = score()->tick2segmentMM(tick2(), false, SegmentType::ChordRest);
             _endElement = s ? static_cast<ChordRest*>(s->element(track2())) : nullptr;
-            if (_endElement->type() != Element::Type::CHORD)
+            if (_endElement->type() != ElementType::CHORD)
                   _endElement = nullptr;
             }
       return static_cast<Chord*>(_endElement);
@@ -726,7 +644,7 @@ Chord* Spanner::endChord()
 ChordRest* Spanner::startCR()
       {
       Q_ASSERT(_anchor == Anchor::SEGMENT || _anchor == Anchor::CHORD);
-      if (!_startElement)
+      if (!_startElement || _startElement->score() != score())
             _startElement = score()->findCR(tick(), track());
       return static_cast<ChordRest*>(_startElement);
       }
@@ -738,11 +656,11 @@ ChordRest* Spanner::startCR()
 ChordRest* Spanner::endCR()
       {
       Q_ASSERT(_anchor == Anchor::SEGMENT || _anchor == Anchor::CHORD);
-      if (!_endElement && type() == Element::Type::SLUR) {
-            Segment* s = score()->tick2segmentMM(tick2(), false, Segment::Type::ChordRest);
-            _endElement = s ? static_cast<ChordRest*>(s->element(track2())) : nullptr;
+      if ((!_endElement || _endElement->score() != score())) {
+            Segment* s = score()->tick2segmentMM(tick2(), false, SegmentType::ChordRest);
+            _endElement = s ? toChordRest(s->element(track2())) : 0;
             }
-      return static_cast<ChordRest*>(_endElement);
+      return toChordRest(_endElement);
       }
 
 //---------------------------------------------------------
@@ -751,6 +669,7 @@ ChordRest* Spanner::endCR()
 
 Segment* Spanner::startSegment() const
       {
+      Q_ASSERT(score() != NULL);
       return score()->tick2rightSegment(tick());
       }
 
@@ -769,7 +688,7 @@ Segment* Spanner::endSegment() const
 
 Measure* Spanner::startMeasure() const
       {
-      Q_ASSERT(!_endElement || _endElement->type() == Element::Type::MEASURE);
+      Q_ASSERT(!_startElement || _startElement->type() == ElementType::MEASURE);
       return static_cast<Measure*>(_startElement);
       }
 
@@ -779,7 +698,7 @@ Measure* Spanner::startMeasure() const
 
 Measure* Spanner::endMeasure() const
       {
-      Q_ASSERT(!_endElement || _endElement->type() == Element::Type::MEASURE);
+      Q_ASSERT(!_endElement || _endElement->type() == ElementType::MEASURE);
       return static_cast<Measure*>(_endElement);
       }
 
@@ -824,7 +743,7 @@ void Spanner::setStartElement(Element* e)
       {
 #ifndef NDEBUG
       if (_anchor == Anchor::NOTE)
-            Q_ASSERT(!e || e->type() == Element::Type::NOTE);
+            Q_ASSERT(!e || e->type() == ElementType::NOTE);
 #endif
       _startElement = e;
       }
@@ -837,16 +756,78 @@ void Spanner::setEndElement(Element* e)
       {
 #ifndef NDEBUG
       if (_anchor == Anchor::NOTE)
-            Q_ASSERT(!e || e->type() == Element::Type::NOTE);
+            Q_ASSERT(!e || e->type() == ElementType::NOTE);
 #endif
       _endElement = e;
       }
 
 //---------------------------------------------------------
-//   nextElement
+//   nextSpanner
 //---------------------------------------------------------
 
-Element* Spanner::nextElement()
+Spanner* Spanner::nextSpanner(Element* e, int activeStaff)
+      {
+    std::multimap<int, Spanner*> mmap = score()->spanner();
+          auto range = mmap.equal_range(tick());
+          if (range.first != range.second) { // range not empty
+                for (auto i = range.first; i != range.second; ++i) {
+                      if (i->second == e) {
+                            while (i != range.second) {
+                                  ++i;
+                                  if (i == range.second)
+                                        return nullptr;
+                                  Spanner* s =  i->second;
+                                  Element* st = s->startElement();
+                                  if (!st)
+                                        continue;
+                                  if (s->startSegment() == static_cast<Spanner*>(e)->startSegment() &&
+                                      st->staffIdx() == activeStaff)
+                                        return s;
+                                  //else
+                                        //return nullptr;
+                                  }
+                            break;
+                           /* else {
+                                  break;
+                                  }*/
+                            }
+                      }
+                 }
+          return nullptr;
+      }
+
+//---------------------------------------------------------
+//   prevSpanner
+//---------------------------------------------------------
+
+Spanner* Spanner::prevSpanner(Element* e, int activeStaff)
+      {
+      std::multimap<int, Spanner*> mmap = score()->spanner();
+      auto range = mmap.equal_range(tick());
+      if (range.first != range.second) { // range not empty
+            for (auto i = range.first; i != range.second; ++i) {
+                  if (i->second == e) {
+                        if (i == range.first)
+                              return nullptr;
+                        while (i != range.first) {
+                              --i;
+                              Spanner* s =  i->second;
+                              if (s->startSegment() == static_cast<Spanner*>(e)->startSegment() &&
+                                  s->startElement()->staffIdx() == activeStaff)
+                                    return s;
+                              }
+                        break;
+                        }
+                  }
+            }
+      return nullptr;
+      }
+
+//---------------------------------------------------------
+//   nextSegmentElement
+//---------------------------------------------------------
+
+Element* Spanner::nextSegmentElement()
       {
       Segment* s = startSegment();
       if (s)
@@ -855,10 +836,10 @@ Element* Spanner::nextElement()
       }
 
 //---------------------------------------------------------
-//   prevElement
+//   prevSegmentElement
 //---------------------------------------------------------
 
-Element* Spanner::prevElement()
+Element* Spanner::prevSegmentElement()
       {
       Segment* s = endSegment();
       if (s)
@@ -868,18 +849,13 @@ Element* Spanner::prevElement()
 
 //---------------------------------------------------------
 //   setTick
-//   //no: @warning Alters spannerMap - Do not call from within a loop over spannerMap
 //---------------------------------------------------------
 
 void Spanner::setTick(int v)
       {
       _tick = v;
-// WS: this is a low level function and should have no side effects
-//      if (score()) {
-//our starting tick changed, we'd need to occupy a different position in the spannerMap
-//            if (score()->spannerMap().removeSpanner(this))
-//                  score()->addSpanner(this);
-//            }
+      if (score())
+            score()->spannerMap().setDirty();
       }
 
 //---------------------------------------------------------
@@ -888,9 +864,7 @@ void Spanner::setTick(int v)
 
 void Spanner::setTick2(int v)
       {
-      _ticks = v - _tick;
-      if (score())
-            score()->spannerMap().setDirty();
+      setTicks(v - _tick);
       }
 
 //---------------------------------------------------------

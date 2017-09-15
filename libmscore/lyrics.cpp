@@ -18,6 +18,7 @@
 #include "system.h"
 #include "xml.h"
 #include "staff.h"
+#include "segment.h"
 
 namespace Ms {
 
@@ -32,7 +33,7 @@ static const qreal TWICE = 2.0;
 static Lyrics* searchNextLyrics(Segment* s, int staffIdx, int verse, Element::Placement p)
       {
       Lyrics* l = 0;
-      while ((s = s->next1(Segment::Type::ChordRest))) {
+      while ((s = s->next1(SegmentType::ChordRest))) {
             int strack = staffIdx * VOICES;
             int etrack = strack + VOICES;
             // search through all tracks of current staff looking for a lyric in specified verse
@@ -56,14 +57,13 @@ static Lyrics* searchNextLyrics(Segment* s, int staffIdx, int verse, Element::Pl
 //---------------------------------------------------------
 
 Lyrics::Lyrics(Score* s)
-   : Text(s)
+   : Text(SubStyle::LYRIC1, s)
       {
-      setTextStyleType(TextStyleType::LYRIC1);
       _no         = 0;
       _ticks      = 0;
       _syllabic   = Syllabic::SINGLE;
       _separator  = 0;
-      placementStyle = PropertyStyle::STYLED;
+      placementStyle = PropertyFlags::STYLED;
       setPlacement(Placement(s->styleI(StyleIdx::lyricsPlacement)));
       }
 
@@ -99,7 +99,7 @@ void Lyrics::scanElements(void* data, void (*func)(void*, Element*), bool /*all*
 //   write
 //---------------------------------------------------------
 
-void Lyrics::write(Xml& xml) const
+void Lyrics::write(XmlWriter& xml) const
       {
       if (!xml.canWrite(this))
             return;
@@ -151,12 +151,12 @@ void Lyrics::read(XmlReader& e)
             else if (tag == "ticks")
                   _ticks = e.readInt();
             else if (tag == "Number") {                           // obsolete
-                  Text* _verseNumber = new Text(score());
+                  _verseNumber = new Text(score());
                   _verseNumber->read(e);
                   _verseNumber->setParent(this);
                   }
             else if (tag == "placement") {
-                  placementStyle = PropertyStyle::UNSTYLED;
+                  placementStyle = PropertyFlags::UNSTYLED;
                   Text::readProperties(e);
                   }
             else if (!Text::readProperties(e))
@@ -181,7 +181,7 @@ void Lyrics::read(XmlReader& e)
 void Lyrics::add(Element* el)
       {
       el->setParent(this);
-      if (el->type() == Element::Type::LINE)
+      if (el->type() == ElementType::LINE)
 //            _separator.append((Line*)el);           // ignore! Internally managed
             ;
       else
@@ -194,14 +194,14 @@ void Lyrics::add(Element* el)
 
 void Lyrics::remove(Element* el)
       {
-      if (el->type() == Element::Type::LYRICSLINE) {
+      if (el->isLyricsLine()) {
             // only if separator still exists and is the right one
             if (_separator != nullptr && el == _separator) {
                   // Lyrics::remove() and LyricsLine::removeUnmanaged() call each other;
                   // be sure each finds a clean context
                   LyricsLine* separ = _separator;
-                  _separator = nullptr;
-                  separ->setParent(nullptr);
+                  _separator = 0;
+                  separ->setParent(0);
                   separ->removeUnmanaged();
                   delete separ;
                   }
@@ -224,16 +224,16 @@ bool Lyrics::isMelisma() const
       // if so, it is a melisma only if there is no lyric in same verse on next CR
       if (_syllabic == Syllabic::BEGIN || _syllabic == Syllabic::MIDDLE) {
             // find next CR on same track and check for existence of lyric in same verse
-            ChordRest* cr = chordRest();
-            Segment* s = cr->segment()->next1();
-            ChordRest* ncr = s ? s->nextChordRest(cr->track()) : nullptr;
+            ChordRest* cr  = chordRest();
+            Segment* s     = cr->segment()->next1();
+            ChordRest* ncr = s ? s->nextChordRest(cr->track()) : 0;
             if (ncr && !ncr->lyrics(_no, placement()))
                   return true;
             }
 
       // default - not a melisma
       return false;
-}
+      }
 
 //---------------------------------------------------------
 //   layout
@@ -267,10 +267,11 @@ void Lyrics::layout1()
           return;
 
       qreal lh = lineSpacing() * score()->styleD(StyleIdx::lyricsLineHeight);
-      qreal y;
+      qreal y = 0;
 
       if (placeBelow())
-            y  = lh * (_no+1) + score()->styleP(StyleIdx::lyricsPosBelow) + staff()->height();
+//            y  = lh * (_no+1) + score()->styleP(StyleIdx::lyricsPosBelow) + staff()->height();
+            y  = lh * _no + score()->styleP(StyleIdx::lyricsPosBelow) + staff()->height();
       else {
             // we are counting _no from bottom to top for verses above
             y = -lh * _no + score()->styleP(StyleIdx::lyricsPosAbove);
@@ -284,7 +285,7 @@ void Lyrics::layout1()
       bool hasNumber     = false; // _verseNumber;
       qreal centerAdjust = 0.0;
       qreal leftAdjust   = 0.0;
-      QString s          = plainText(true);
+      QString s          = plainText();
 
       // find:
       // 1) string of numbers and non-word characters at start of syllable
@@ -315,8 +316,8 @@ void Lyrics::layout1()
             }
 
       ChordRest* cr = chordRest();
-      Align ta = textStyle().align();
-      if (ta & AlignmentFlags::HCENTER) {
+      Align ta = align();
+      if (ta & Align::HCENTER) {
             //
             // center under notehead, not origin
             // however, lyrics that are melismas or have verse numbers will be forced to left alignment
@@ -328,7 +329,7 @@ void Lyrics::layout1()
             else                                // force left alignment
                   x += width() * .5 - cr->x() - leftAdjust;
             }
-      else if (!(ta & AlignmentFlags::RIGHT)) {
+      else if (!(ta & Align::RIGHT)) {
             // even for left aligned syllables, ignore leading verse numbers and/or punctuation
             x -= leftAdjust;
             }
@@ -369,20 +370,23 @@ void Lyrics::layout1()
                   }
 #endif
             }
-      else
+      else {
             if (_separator) {
                   _separator->removeUnmanaged();
                   delete _separator;
                   _separator = nullptr;
                   }
+            }
       }
 
 //---------------------------------------------------------
 //   paste
 //---------------------------------------------------------
 
-void Lyrics::paste(MuseScoreView* scoreview)
+void Lyrics::paste(EditData& /*ed*/)
       {
+#if 0 // TODO
+      MuseScoreView* scoreview = ed.view;
 #if defined(Q_OS_MAC) || defined(Q_OS_WIN)
       QClipboard::Mode mode = QClipboard::Clipboard;
 #else
@@ -445,6 +449,7 @@ void Lyrics::paste(MuseScoreView* scoreview)
             scoreview->lyricsUnderscore();
       else
             scoreview->lyricsTab(false, false, true);
+#endif
       }
 
 //---------------------------------------------------------
@@ -460,27 +465,27 @@ int Lyrics::endTick() const
 //   acceptDrop
 //---------------------------------------------------------
 
-bool Lyrics::acceptDrop(const DropData& data) const
+bool Lyrics::acceptDrop(EditData& data) const
       {
-      return data.element->type() == Element::Type::TEXT || Text::acceptDrop(data);
+      return data.element->isText() || Text::acceptDrop(data);
       }
 
 //---------------------------------------------------------
 //   drop
 //---------------------------------------------------------
 
-Element* Lyrics::drop(const DropData& data)
+Element* Lyrics::drop(EditData& data)
       {
-      Element::Type type = data.element->type();
-      if (type == Element::Type::SYMBOL || type == Element::Type::FSYMBOL) {
+      ElementType type = data.element->type();
+      if (type == ElementType::SYMBOL || type == ElementType::FSYMBOL) {
             Text::drop(data);
             return 0;
             }
-      Text* e = static_cast<Text*>(data.element);
-      if (!(type == Element::Type::TEXT && e->textStyle().name() == "Lyrics Verse Number")) {
-            delete e;
+      if (!data.element->isText()) {
+            delete data.element;
             return 0;
             }
+      Text* e = toText(data.element);
       e->setParent(this);
       score()->undoAddElement(e);
       return e;
@@ -495,11 +500,11 @@ void Lyrics::setNo(int n)
       _no = n;
       // adjust beween LYRICS1 and LYRICS2 only; keep other styles as they are
       // (_no is 0-based, so odd _no means even line and viceversa)
-      if (type() == Element::Type::LYRICS) {
-            if( (_no & 1) && textStyleType() == TextStyleType::LYRIC1)
-                  setTextStyleType(TextStyleType::LYRIC2);
-            if( !(_no & 1) && textStyleType() == TextStyleType::LYRIC2)
-                  setTextStyleType(TextStyleType::LYRIC1);
+      if (type() == ElementType::LYRICS) {
+            if ((_no & 1) && subStyle() == SubStyle::LYRIC1)
+                  initSubStyle(SubStyle::LYRIC2);
+            if (!(_no & 1) && subStyle() == SubStyle::LYRIC2)
+                  initSubStyle(SubStyle::LYRIC1);
             }
       }
 
@@ -507,9 +512,9 @@ void Lyrics::setNo(int n)
 //   endEdit
 //---------------------------------------------------------
 
-void Lyrics::endEdit()
+void Lyrics::endEdit(EditData& ed)
       {
-      Text::endEdit();
+      Text::endEdit(ed);
       score()->setLayoutAll();
       }
 
@@ -552,7 +557,7 @@ bool Lyrics::setProperty(P_ID propertyId, const QVariant& v)
       {
       switch (propertyId) {
             case P_ID::PLACEMENT:
-                  placementStyle = PropertyStyle::UNSTYLED;
+                  placementStyle = PropertyFlags::UNSTYLED;
                   setPlacement(Placement(v.toInt()));
                   break;
             case P_ID::SYLLABIC:
@@ -569,7 +574,7 @@ bool Lyrics::setProperty(P_ID propertyId, const QVariant& v)
                         return false;
                   break;
             }
-      score()->setLayout(segment()->tick());
+      score()->setLayout(tick());
       return true;
       }
 
@@ -580,6 +585,8 @@ bool Lyrics::setProperty(P_ID propertyId, const QVariant& v)
 QVariant Lyrics::propertyDefault(P_ID id) const
       {
       switch (id) {
+            case P_ID::SUB_STYLE:
+                  return int(SubStyle::LYRIC1);
             case P_ID::PLACEMENT:
                   return score()->styleI(StyleIdx::lyricsPlacement);
             case P_ID::SYLLABIC:
@@ -604,13 +611,13 @@ LyricsLine::LyricsLine(Score* s)
       setDiagonal(false);
       setLineWidth(Spatium(Lyrics::LYRICS_DASH_DEFAULT_LINE_THICKNESS));
       setAnchor(Spanner::Anchor::SEGMENT);
-      _nextLyrics = nullptr;
+      _nextLyrics = 0;
       }
 
 LyricsLine::LyricsLine(const LyricsLine& g)
    : SLine(g)
       {
-      _nextLyrics = nullptr;
+      _nextLyrics = 0;
       }
 
 //---------------------------------------------------------
@@ -644,7 +651,7 @@ void LyricsLine::layout()
                   }
             Element* se = s->element(lyricsTrack);
             // everything is OK if we have reached a chord at right tick on right track
-            if (s->tick() == lyricsEndTick && se && se->type() == Element::Type::CHORD) {
+            if (s->tick() == lyricsEndTick && se && se->type() == ElementType::CHORD) {
                   // advance to next CR, or last segment if no next CR
                   s = s->nextCR(lyricsTrack, true);
                   if (!s)
@@ -657,14 +664,14 @@ void LyricsLine::layout()
                   // s is already pointing to segment past endTick (or to last segment)
                   // we should shorten the lyrics tick count to make this work
                   Segment* ns = s;
-                  Segment* ps = s->prev1(Segment::Type::ChordRest);
+                  Segment* ps = s->prev1(SegmentType::ChordRest);
                   while (ps && ps != lyricsSegment) {
                         Element* pe = ps->element(lyricsTrack);
                         // we're looking for an actual chord on this track
-                        if (pe && pe->type() == Element::Type::CHORD)
+                        if (pe && pe->type() == ElementType::CHORD)
                               break;
                         s = ps;
-                        ps = ps->prev1(Segment::Type::ChordRest);
+                        ps = ps->prev1(SegmentType::ChordRest);
                         }
                   if (!ps || ps == lyricsSegment) {
                         // no valid previous CR, so try to lengthen melisma instead
@@ -672,7 +679,7 @@ void LyricsLine::layout()
                         s = ps->nextCR(lyricsTrack, true);
                         Element* e = s ? s->element(lyricsTrack) : nullptr;
                         // check to make sure we have a chord
-                        if (!e || e->type() != Element::Type::CHORD) {
+                        if (!e || e->type() != ElementType::CHORD) {
                               // nothing to do but set ticks to 0
                               // this will result in melisma being deleted later
                               lyrics()->undoChangeProperty(P_ID::LYRIC_TICKS, 0);
@@ -738,7 +745,7 @@ bool LyricsLine::setProperty(P_ID propertyId, const QVariant& v)
             case P_ID::SPANNER_TICKS:
                   {
                   // if parent lyrics has a melisma, change its length too
-                  if (parent() && parent()->type() == Element::Type::LYRICS
+                  if (parent() && parent()->type() == ElementType::LYRICS
                               && static_cast<Lyrics*>(parent())->ticks() > 0) {
                         int newTicks   = static_cast<Lyrics*>(parent())->ticks() + v.toInt() - ticks();
                         parent()->undoChangeProperty(P_ID::LYRIC_TICKS, newTicks);
@@ -763,6 +770,7 @@ LyricsLineSegment::LyricsLineSegment(Score* s)
       : LineSegment(s)
       {
       setFlags(ElementFlag::SEGMENT | ElementFlag::ON_STAFF);
+      clearFlags(ElementFlag::SELECTABLE | ElementFlag::MOVABLE);
       setGenerated(true);
       }
 
@@ -853,8 +861,7 @@ void LyricsLineSegment::layout()
             _dashLength = lyr->dashLength();
 #else
             // set conventional dash Y pos
-            qreal dashOffset = lyr->textStyle().fontMetrics(sp).xHeight() * Lyrics::LYRICS_DASH_Y_POS_RATIO;
-            rypos() -= dashOffset;
+            rypos() -= MScore::pixelRatio * lyr->fontMetrics().xHeight() * Lyrics::LYRICS_DASH_Y_POS_RATIO;
             _dashLength = score()->styleP(StyleIdx::lyricsDashMaxLength) * mag();  // and dash length
 #endif
             qreal len         = pos2().x();
@@ -918,14 +925,14 @@ void LyricsLineSegment::draw(QPainter* painter) const
 //   propertyStyle
 //---------------------------------------------------------
 
-PropertyStyle Lyrics::propertyStyle(P_ID id) const
+PropertyFlags Lyrics::propertyFlags(P_ID id) const
       {
       switch (id) {
             case P_ID::PLACEMENT:
-                  return PropertyStyle::NOSTYLE;
+                  return PropertyFlags::NOSTYLE;
 
             default:
-                  return Text::propertyStyle(id);
+                  return Text::propertyFlags(id);
             }
       }
 
@@ -938,6 +945,18 @@ StyleIdx Lyrics::getPropertyStyle(P_ID id) const
       switch (id) {
             case P_ID::PLACEMENT:
                   return StyleIdx::lyricsPlacement;
+            case P_ID::FONT_FACE:
+                  return isEven() ? StyleIdx::lyricsEvenFontFace : StyleIdx::lyricsOddFontFace;
+            case P_ID::FONT_SIZE:
+                  return isEven() ? StyleIdx::lyricsEvenFontSize : StyleIdx::lyricsOddFontSize;
+            case P_ID::FONT_BOLD:
+                  return isEven() ? StyleIdx::lyricsEvenFontBold : StyleIdx::lyricsOddFontBold;
+            case P_ID::FONT_ITALIC:
+                  return isEven() ? StyleIdx::lyricsEvenFontItalic : StyleIdx::lyricsOddFontItalic;
+            case P_ID::FONT_UNDERLINE:
+                  return isEven() ? StyleIdx::lyricsEvenFontUnderline : StyleIdx::lyricsOddFontUnderline;
+            case P_ID::ALIGN:
+                  return isEven() ? StyleIdx::lyricsEvenAlign : StyleIdx::lyricsOddAlign;
             default:
                   break;
             }
@@ -951,8 +970,9 @@ StyleIdx Lyrics::getPropertyStyle(P_ID id) const
 
 void Lyrics::styleChanged()
       {
-      if (placementStyle == PropertyStyle::STYLED)
+      if (placementStyle == PropertyFlags::STYLED)
             setPlacement(Placement(score()->styleI(StyleIdx::lyricsPlacement)));
+      Text::styleChanged();
       }
 
 //---------------------------------------------------------
@@ -961,8 +981,7 @@ void Lyrics::styleChanged()
 
 void Lyrics::reset()
       {
-      if (placementStyle == PropertyStyle::UNSTYLED)
-            undoChangeProperty(P_ID::PLACEMENT, propertyDefault(P_ID::PLACEMENT), PropertyStyle::STYLED);
+      undoResetProperty(P_ID::PLACEMENT);
       Text::reset();
       }
 
@@ -975,7 +994,7 @@ void Lyrics::resetProperty(P_ID id)
       switch (id) {
             case P_ID::PLACEMENT:
                   setProperty(id, propertyDefault(id));
-                  placementStyle = PropertyStyle::STYLED;
+                  placementStyle = PropertyFlags::STYLED;
                   break;
 
             default:

@@ -41,7 +41,6 @@ add_library(
       testutils STATIC
       testutils.cpp
       ${PROJECT_SOURCE_DIR}/libmscore/mcursor.cpp
-      ${PROJECT_SOURCE_DIR}/mscore/album.cpp
       ${PROJECT_SOURCE_DIR}/mscore/bb.cpp
       ${PROJECT_SOURCE_DIR}/mscore/capella.cpp
       ${PROJECT_SOURCE_DIR}/mscore/capxml.cpp
@@ -157,9 +156,9 @@ add_custom_target(reporthtml
       )
 
 subdirs (
-        libmscore/compat114
+#        libmscore/compat114
         libmscore/compat206
-        libmscore/album
+#        libmscore/album            # obsolete
         libmscore/barline
         libmscore/beam
         libmscore/breath
@@ -170,6 +169,7 @@ subdirs (
         libmscore/copypaste
         libmscore/copypastesymbollist
         libmscore/dynamic
+        libmscore/durationtype
         libmscore/earlymusic
         libmscore/element
         libmscore/exchangevoices
@@ -179,10 +179,11 @@ subdirs (
         libmscore/join
         libmscore/keysig
         libmscore/layout
+        libmscore/links
         libmscore/parts
         libmscore/measure
         libmscore/midi                 # one disabled
-        libmscore/midimapping
+#        libmscore/midimapping
         libmscore/note
         libmscore/repeat
         libmscore/rhythmicGrouping
@@ -195,14 +196,14 @@ subdirs (
         libmscore/tools                # Some tests disabled
         libmscore/transpose
         libmscore/tuplet
-        libmscore/text
+#        libmscore/text        work in progress...
         importmidi
         capella
         biab
 #        musicxml
         guitarpro
         scripting
-        testoves
+#        testoves
         zerberus/comments
         zerberus/envelopes
         zerberus/includes

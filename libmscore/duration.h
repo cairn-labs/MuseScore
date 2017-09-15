@@ -36,7 +36,7 @@ class DurationElement : public Element {
       Tuplet* _tuplet;
 
 #ifdef SCRIPT_INTERFACE
-      Q_OBJECT
+      Q_GADGET
       Q_PROPERTY(FractionWrapper* duration READ durationW WRITE setDurationW)
       Q_PROPERTY(FractionWrapper* globalDuration READ globalDurW)
 
@@ -53,11 +53,12 @@ class DurationElement : public Element {
       virtual Measure* measure() const    { return (Measure*)(parent()); }
 
       virtual bool readProperties(XmlReader& e);
-      virtual void writeProperties(Xml& xml) const;
-      void writeTuplet(Xml& xml);
+      virtual void writeProperties(XmlWriter& xml) const;
+      void writeTuplet(XmlWriter& xml);
 
       void setTuplet(Tuplet* t)           { _tuplet = t;      }
       Tuplet* tuplet() const              { return _tuplet;   }
+      Tuplet* topTuplet() const;
       virtual Beam* beam() const          { return 0;         }
       int actualTicks() const;
       Fraction actualFraction() const;

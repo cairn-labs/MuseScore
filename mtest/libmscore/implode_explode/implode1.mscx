@@ -9,26 +9,8 @@
       <clefLeftMargin>0.64</clefLeftMargin>
       <clefKeyRightMargin>1.75</clefKeyRightMargin>
       <lastSystemFillLimit>0</lastSystemFillLimit>
-      <pedalY>0</pedalY>
-      <trillY>0</trillY>
       <concertPitch>1</concertPitch>
       <minMMRestWidth>0</minMMRestWidth>
-      <page-layout>
-        <page-height>1683.78</page-height>
-        <page-width>1190.55</page-width>
-        <page-margins type="even">
-          <left-margin>56.6929</left-margin>
-          <right-margin>56.6929</right-margin>
-          <top-margin>56.6929</top-margin>
-          <bottom-margin>113.386</bottom-margin>
-          </page-margins>
-        <page-margins type="odd">
-          <left-margin>56.6929</left-margin>
-          <right-margin>56.6929</right-margin>
-          <top-margin>56.6929</top-margin>
-          <bottom-margin>113.386</bottom-margin>
-          </page-margins>
-        </page-layout>
       <Spatium>1.76389</Spatium>
       </Style>
     <showInvisible>1</showInvisible>
@@ -46,14 +28,6 @@
     <metaTag name="translator"></metaTag>
     <metaTag name="workNumber"></metaTag>
     <metaTag name="workTitle">implode1</metaTag>
-    <PageList>
-      <Page>
-        <System>
-          </System>
-        <System>
-          </System>
-        </Page>
-      </PageList>
     <Part>
       <Staff id="1">
         <StaffType group="pitched">
@@ -111,7 +85,6 @@
         <StaffType group="pitched">
           <name>stdNormal</name>
           </StaffType>
-        <bracket type="-1" span="0"/>
         </Staff>
       <trackName>Flute</trackName>
       <Instrument>
@@ -163,7 +136,6 @@
         <StaffType group="pitched">
           <name>stdNormal</name>
           </StaffType>
-        <bracket type="-1" span="0"/>
         </Staff>
       <trackName>B♭ Trumpet</trackName>
       <Instrument>
@@ -223,7 +195,6 @@
           <name>stdNormal</name>
           </StaffType>
         <defaultClef>F</defaultClef>
-        <bracket type="-1" span="0"/>
         </Staff>
       <trackName>Tenor Trombone</trackName>
       <Instrument>
@@ -283,7 +254,6 @@
         <TimeSig>
           <sigN>4</sigN>
           <sigD>4</sigD>
-          <showCourtesySig>1</showCourtesySig>
           </TimeSig>
         <Rest>
           <durationType>measure</durationType>
@@ -314,7 +284,6 @@
         <TimeSig>
           <sigN>4</sigN>
           <sigD>4</sigD>
-          <showCourtesySig>1</showCourtesySig>
           </TimeSig>
         <Chord>
           <durationType>half</durationType>
@@ -394,7 +363,6 @@
         <TimeSig>
           <sigN>4</sigN>
           <sigD>4</sigD>
-          <showCourtesySig>1</showCourtesySig>
           </TimeSig>
         <Chord>
           <durationType>quarter</durationType>
@@ -632,7 +600,6 @@
         <TimeSig>
           <sigN>4</sigN>
           <sigD>4</sigD>
-          <showCourtesySig>1</showCourtesySig>
           </TimeSig>
         <Chord>
           <durationType>half</durationType>

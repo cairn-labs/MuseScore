@@ -128,7 +128,7 @@ QPointF FretDiagram::pagePos() const
       {
       if (parent() == 0)
             return pos();
-      if (parent()->type() == Element::Type::SEGMENT) {
+      if (parent()->type() == ElementType::SEGMENT) {
             Measure* m = static_cast<Segment*>(parent())->measure();
             System* system = m->system();
             qreal yp = y();
@@ -150,7 +150,7 @@ QLineF FretDiagram::dragAnchor() const
       for (Element* e = parent(); e; e = e->parent())
             xp += e->x();
       qreal yp;
-      if (parent()->type() == Element::Type::SEGMENT) {
+      if (parent()->type() == ElementType::SEGMENT) {
             System* system = static_cast<Segment*>(parent())->measure()->system();
             yp = system->staffCanvasYpage(staffIdx());
             }
@@ -159,7 +159,7 @@ QLineF FretDiagram::dragAnchor() const
       QPointF p1(xp, yp);
       return QLineF(p1, canvasPos());
 #if 0 // TODOxx
-      if (parent()->type() == Element::Type::SEGMENT) {
+      if (parent()->type() == ElementType::SEGMENT) {
             Segment* s     = static_cast<Segment*>(parent());
             Measure* m     = s->measure();
             System* system = m->system();
@@ -171,15 +171,15 @@ QLineF FretDiagram::dragAnchor() const
             qreal y  = 0.0;
             qreal tw = width();
             qreal th = height();
-            if (_align & AlignmentFlags::BOTTOM)
+            if (_align & Align::BOTTOM)
                   y = th;
-            else if (_align & AlignmentFlags::VCENTER)
+            else if (_align & Align::VCENTER)
                   y = (th * .5);
-            else if (_align & AlignmentFlags::BASELINE)
+            else if (_align & Align::BASELINE)
                   y = baseLine();
-            if (_align & AlignmentFlags::RIGHT)
+            if (_align & Align::RIGHT)
                   x = tw;
-            else if (_align & AlignmentFlags::HCENTER)
+            else if (_align & Align::HCENTER)
                   x = (tw * .5);
             return QLineF(p1, abbox().topLeft() + QPointF(x, y));
             }
@@ -286,7 +286,7 @@ void FretDiagram::draw(QPainter* painter) const
             painter->drawLine(QLineF(0.0, y, x2, y));
             }
       QFont scaledFont(font);
-      scaledFont.setPointSizeF(font.pointSize() * _userMag);
+      scaledFont.setPointSizeF(font.pointSize() * _userMag * score()->styleD(StyleIdx::fretMag));
       QFontMetricsF fm(scaledFont, MScore::paintDevice());
       scaledFont.setPointSizeF(scaledFont.pointSizeF() * MScore::pixelRatio);
 
@@ -310,7 +310,7 @@ void FretDiagram::draw(QPainter* painter) const
       if (_barre) {
             int string = -1;
             for (int i = 0; i < _strings; ++i) {
-                  if (_dots[i] == _barre) {
+                  if (_dots && _dots[i] == _barre) {
                         string = i;
                         break;
                         }
@@ -328,7 +328,7 @@ void FretDiagram::draw(QPainter* painter) const
       if (_fretOffset > 0) {
             qreal fretNumMag = score()->styleD(StyleIdx::fretNumMag);
             QFont scaledFont(font);
-            scaledFont.setPointSizeF(font.pointSize() * fretNumMag * _userMag * MScore::pixelRatio);
+            scaledFont.setPointSizeF(font.pointSize() * fretNumMag * _userMag * score()->styleD(StyleIdx::fretMag) * MScore::pixelRatio);
             painter->setFont(scaledFont);
             if (score()->styleI(StyleIdx::fretNumPos) == 0)
                   painter->drawText(QRectF(-stringDist *.4, .0, .0, fretDist),
@@ -390,7 +390,7 @@ void FretDiagram::layout()
 //   write
 //---------------------------------------------------------
 
-void FretDiagram::write(Xml& xml) const
+void FretDiagram::write(XmlWriter& xml) const
       {
       if (!xml.canWrite(this))
             return;
@@ -511,7 +511,7 @@ void FretDiagram::setFingering(int string, int finger)
 void FretDiagram::add(Element* e)
       {
       e->setParent(this);
-      if (e->type() == Element::Type::HARMONY) {
+      if (e->type() == ElementType::HARMONY) {
             _harmony = static_cast<Harmony*>(e);
             _harmony->setTrack(track());
             }
@@ -535,22 +535,22 @@ void FretDiagram::remove(Element* e)
 //   acceptDrop
 //---------------------------------------------------------
 
-bool FretDiagram::acceptDrop(const DropData& data) const
+bool FretDiagram::acceptDrop(EditData& data) const
       {
-      return data.element->type() == Element::Type::HARMONY;
+      return data.element->type() == ElementType::HARMONY;
       }
 
 //---------------------------------------------------------
 //   drop
 //---------------------------------------------------------
 
-Element* FretDiagram::drop(const DropData& data)
+Element* FretDiagram::drop(EditData& data)
       {
       Element* e = data.element;
-      if (e->type() == Element::Type::HARMONY) {
+      if (e->type() == ElementType::HARMONY) {
             Harmony* h = static_cast<Harmony*>(e);
             h->setParent(parent());
-            h->setTrack((track() / VOICES) * VOICES);
+            h->setTrack(track());
             score()->undoAddElement(h);
             }
       else {
@@ -634,7 +634,7 @@ void FretDiagram::readMusicXML(XmlReader& e)
 //   Write MusicXML
 //---------------------------------------------------------
 
-void FretDiagram::writeMusicXML(Xml& xml) const
+void FretDiagram::writeMusicXML(XmlWriter& xml) const
       {
       qDebug("FretDiagram::writeMusicXML() this %p harmony %p", this, _harmony);
       int _strings = strings();

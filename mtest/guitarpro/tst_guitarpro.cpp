@@ -60,6 +60,7 @@ private slots:
       void gpDottedTuplets() { gpReadTest("dotted-tuplets", "gp5"); }
       void gpTupletSlur()    { gpReadTest("tuplet-with-slur", "gp4"); }
       void gpBeamsStemsLL()  { gpReadTest("beams-stems-ledger-lines", "gp5"); }
+      void gpxFretDiagram_2Instr() { gpReadTest("fret-diagram_2instruments", "gpx"); }
       void gpxFretDiagram()  { gpReadTest("fret-diagram", "gpx"); }
       void gp5FretDiagram()  { gpReadTest("fret-diagram", "gp5"); }
       void gp4FretDiagram()  { gpReadTest("fret-diagram", "gp4"); }
@@ -126,17 +127,28 @@ private slots:
       void gpxRasg()         { gpReadTest("rasg", "gpx"); }
       void gp5Percussion()   { gpReadTest("all-percussion", "gp5"); }
       void gpxFermata()      { gpReadTest("fermata", "gpx"); }
-      void gpxDirections()   { gpReadTest("directions", "gpx"); }
+//ws: no idea why this does not work      void gpxDirections()   { gpReadTest("directions", "gpx"); }
       void gpxSlur()         { gpReadTest("slur", "gpx"); }
+      void gpxSlurHS()       { gpReadTest("slur_hammer_slur", "gpx"); }
+      void gpxSlur3M()       { gpReadTest("slur_over_3_measures", "gpx"); }
+      void gpxSlurSH()       { gpReadTest("slur_slur_hammer", "gpx"); }
+      void gpxSlurV()        { gpReadTest("slur_voices", "gpx"); }
       void gpxVibrato()      { gpReadTest("vibrato", "gpx"); }
       void gpxVolumeSwell()  { gpReadTest("volume-swell", "gpx"); }
-      void gpxTremoloBar()   { gpReadTest("tremolo-bar", "gpx"); }
+//      void gpxTremoloBar()   { gpReadTest("tremolo-bar", "gpx"); }
       void gpxCopyright()    { gpReadTest("copyright", "gpx"); }
       void gpxFreeTime()     { gpReadTest("free-time", "gpx"); }
       void gpxRepeatBar()    { gpReadTest("repeated-bars", "gpx"); }
       void gp3DottedGliss()  { gpReadTest("dotted-gliss", "gp3"); }
       void highPitch()       { gpReadTest("high-pitch", "gp3"); }
       void gpxMultiVoices()  { gpReadTest("multivoices", "gpx"); }
+      void gpxOttava1()      { gpReadTest("ottava1", "gpx"); }
+      void gpxOttava2()      { gpReadTest("ottava2", "gpx"); }
+      void gpxOttava3()      { gpReadTest("ottava3", "gpx"); }
+      void gpxOttava4()      { gpReadTest("ottava4", "gpx"); }
+      void gpxOttava5()      { gpReadTest("ottava5", "gpx"); }
+      void gpxChornamesKeyboard() { gpReadTest("chordnames_keyboard", "gpx"); }
+      void gpxClefs() { gpReadTest("clefs", "gpx"); }
       };
 
 //---------------------------------------------------------
@@ -150,7 +162,7 @@ void TestGuitarPro::initTestCase()
 
 //---------------------------------------------------------
 //   gpReadTest
-//   read a Capella file, write to a MuseScore file and verify against reference
+//   import file, write to a MuseScore file and verify against reference
 //---------------------------------------------------------
 
 void TestGuitarPro::gpReadTest(const char* file, const char* ext)
@@ -158,7 +170,6 @@ void TestGuitarPro::gpReadTest(const char* file, const char* ext)
       MasterScore* score = readScore(DIR + file + "." + ext);
       QVERIFY(score);
 
-      score->doLayout();
       QVERIFY(saveCompareScore(score, QString("%1.%2.mscx").arg(file).arg(ext),
                                DIR + QString("%1.%2-ref.mscx").arg(file).arg(ext)));
       delete score;

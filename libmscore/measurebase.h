@@ -27,7 +27,6 @@ class Score;
 class System;
 class Measure;
 
-#if 1
 //---------------------------------------------------------
 //   Repeat
 //---------------------------------------------------------
@@ -46,7 +45,6 @@ constexpr Repeat operator| (Repeat t1, Repeat t2) {
 constexpr bool operator& (Repeat t1, Repeat t2) {
       return static_cast<int>(t1) & static_cast<int>(t2);
       }
-#endif
 
 //---------------------------------------------------------
 //   @@ MeasureBase
@@ -61,7 +59,7 @@ constexpr bool operator& (Repeat t1, Repeat t2) {
 //---------------------------------------------------------
 
 class MeasureBase : public Element {
-      Q_OBJECT
+      Q_GADGET
 
       Q_PROPERTY(bool         lineBreak         READ lineBreak   WRITE undoSetLineBreak)
       Q_PROPERTY(Ms::Measure* nextMeasure       READ nextMeasure)
@@ -88,7 +86,7 @@ class MeasureBase : public Element {
       MeasureBase(const MeasureBase&);
 
       virtual MeasureBase* clone() const = 0;
-      virtual Element::Type type() const = 0;
+      virtual ElementType type() const = 0;
 
       virtual void setScore(Score* s) override;
 
@@ -103,8 +101,8 @@ class MeasureBase : public Element {
       Ms::Measure* nextMeasureMM() const;
       Ms::Measure* prevMeasureMM() const;
 
-      virtual void write(Xml&) const override = 0;
-      virtual void write(Xml&, int, bool) const = 0;
+      virtual void write(XmlWriter&) const override = 0;
+      virtual void write(XmlWriter&, int, bool, bool) const = 0;
 
       virtual void layout();
 
@@ -126,7 +124,7 @@ class MeasureBase : public Element {
 
       virtual void add(Element*) override;
       virtual void remove(Element*) override;
-      virtual void writeProperties(Xml&) const override;
+      virtual void writeProperties(XmlWriter&) const override;
       virtual bool readProperties(XmlReader&) override;
 
       virtual int tick() const override      { return _tick;  }
