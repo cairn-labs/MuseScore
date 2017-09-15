@@ -1886,7 +1886,7 @@ Shortcut Shortcut::_sc[] = {
          },
       {
          MsWidget::MAIN_WINDOW,
-         STATE_DISABLED | STATE_NORMAL | STATE_NOTE_ENTRY | STATE_EDIT | STATE_PLAY | STATE_FOTO,
+         STATE_DISABLED | STATE_NORMAL | STATE_NOTE_ENTRY | STATE_EDIT | STATE_TEXT_EDIT | STATE_PLAY | STATE_FOTO,
          "quit",
          QT_TRANSLATE_NOOP("action","Quit")
          },
@@ -3595,6 +3595,16 @@ Shortcut Shortcut::_sc[] = {
          0,
          Icons::Invalid_ICON,
          Qt::ApplicationShortcut
+         },
+      {
+         MsWidget::MAIN_WINDOW,
+         STATE_ALL,
+         "autoplace-slurs",
+         "autoplace slurs",
+         "autoplace slurs",
+         0,
+         Icons::Invalid_ICON,
+         Qt::ApplicationShortcut
          }
 #endif
       };
@@ -3641,6 +3651,17 @@ void Shortcut::setKeys(const QList<QKeySequence>& ks)
       _keys = ks;
       if (_action)
             _action->setShortcuts(_keys);
+      }
+
+//---------------------------------------------------------
+//   setStandardKey
+//---------------------------------------------------------
+
+void Shortcut::setStandardKey(QKeySequence::StandardKey k)
+      {
+      _standardKey = k;
+      if (_action && k != QKeySequence::UnknownKey)
+            _action->setShortcuts(_standardKey);
       }
 
 //---------------------------------------------------------
@@ -3783,6 +3804,14 @@ QString Shortcut::keysToString() const
                   s += "; ";
             s += Shortcut::keySeqToString(_keys[i], QKeySequence::NativeText);
             }
+      if (s.isEmpty() && _standardKey != QKeySequence::UnknownKey) {
+            QList<QKeySequence> keySeqList = QKeySequence::keyBindings(_standardKey);
+            for (int i = 0; i < keySeqList.size(); i++) {
+                  if (i)
+                        s += "; ";
+                  s += Shortcut::keySeqToString(keySeqList[i], QKeySequence::NativeText);
+                  }
+            }
       return s;
       }
 
@@ -3914,7 +3943,7 @@ void Shortcut::read(XmlReader& e)
                   for (const Shortcut& sc : _sc) {
                         for (const QKeySequence s : sc._keys) {
                               if (s == seq)
-                                    qDebug("ambigous shortcut for action <%s>", _key.data());
+                                    qDebug("Ambiguous shortcut for action <%s>", _key.data());
                               }
                         }
 #endif

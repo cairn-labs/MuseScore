@@ -98,8 +98,8 @@ static const StyleType styleTypes[] {
 
       { StyleIdx::endBarWidth,             "endBarWidth",             Spatium(0.5) },       // 0.5
       { StyleIdx::doubleBarDistance,       "doubleBarDistance",       Spatium(0.30) },
-      { StyleIdx::endBarDistance,          "endBarDistance",          Spatium(0.40) },     // 0.3
-      { StyleIdx::repeatBarlineDotSeparation, "repeatBarlineDotSeparation", Spatium(0.40) },
+      { StyleIdx::endBarDistance,          "endBarDistance",          Spatium(.40 + (.5) * .5) },     // 0.3
+      { StyleIdx::repeatBarlineDotSeparation, "repeatBarlineDotSeparation", Spatium(.40 + .16 * .5) },
       { StyleIdx::repeatBarTips,           "repeatBarTips",           QVariant(false) },
       { StyleIdx::startBarlineSingle,      "startBarlineSingle",      QVariant(false) },
       { StyleIdx::startBarlineMultiple,    "startBarlineMultiple",    QVariant(true) },
@@ -579,6 +579,7 @@ static const StyleType styleTypes[] {
       { StyleIdx::rehearsalMarkFontBold,         "rehearsalMarkFontBold",        true },
       { StyleIdx::rehearsalMarkFontItalic,       "rehearsalMarkFontItalic",      false },
       { StyleIdx::rehearsalMarkFontUnderline,    "rehearsalMarkFontUnderline",   false },
+      { StyleIdx::rehearsalMarkAlign,            "rehearsalMarkAlign",           QVariant::fromValue(Align::CENTER | Align::BASELINE) },
       { StyleIdx::rehearsalMarkFrame,            "rehearsalMarkFrame",           true  },
       { StyleIdx::rehearsalMarkFrameSquare,      "rehearsalMarkFrameSquare",     false },
       { StyleIdx::rehearsalMarkFrameCircle,      "rehearsalMarkFrameCircle",     false },
@@ -992,6 +993,7 @@ const std::vector<StyledProperty> rehearsalMarkStyle {
       { StyleIdx::rehearsalMarkFontBold,              P_ID::FONT_BOLD              },
       { StyleIdx::rehearsalMarkFontItalic,            P_ID::FONT_ITALIC            },
       { StyleIdx::rehearsalMarkFontUnderline,         P_ID::FONT_UNDERLINE         },
+      { StyleIdx::rehearsalMarkAlign,                 P_ID::ALIGN                  },
       { StyleIdx::rehearsalMarkFrame,                 P_ID::FRAME                  },
       { StyleIdx::rehearsalMarkFrameSquare,           P_ID::FRAME_SQUARE           },
       { StyleIdx::rehearsalMarkFrameCircle,           P_ID::FRAME_CIRCLE           },
@@ -1055,11 +1057,21 @@ const std::vector<StyledProperty> ottavaStyle {
       };
 
 const std::vector<StyledProperty> pedalStyle {
-      { StyleIdx::pedalFontFace,                      P_ID::FONT_FACE              },
-      { StyleIdx::pedalFontSize,                      P_ID::FONT_SIZE              },
-      { StyleIdx::pedalFontBold,                      P_ID::FONT_BOLD              },
-      { StyleIdx::pedalFontItalic,                    P_ID::FONT_ITALIC            },
-      { StyleIdx::pedalFontUnderline,                 P_ID::FONT_UNDERLINE         },
+      { StyleIdx::pedalFontFace,                      P_ID::BEGIN_FONT_FACE        },
+      { StyleIdx::pedalFontFace,                      P_ID::CONTINUE_FONT_FACE     },
+      { StyleIdx::pedalFontFace,                      P_ID::END_FONT_FACE          },
+      { StyleIdx::pedalFontSize,                      P_ID::BEGIN_FONT_SIZE        },
+      { StyleIdx::pedalFontSize,                      P_ID::CONTINUE_FONT_SIZE     },
+      { StyleIdx::pedalFontSize,                      P_ID::END_FONT_SIZE          },
+      { StyleIdx::pedalFontBold,                      P_ID::BEGIN_FONT_BOLD        },
+      { StyleIdx::pedalFontBold,                      P_ID::CONTINUE_FONT_BOLD     },
+      { StyleIdx::pedalFontBold,                      P_ID::END_FONT_BOLD          },
+      { StyleIdx::pedalFontItalic,                    P_ID::BEGIN_FONT_ITALIC      },
+      { StyleIdx::pedalFontItalic,                    P_ID::CONTINUE_FONT_ITALIC   },
+      { StyleIdx::pedalFontItalic,                    P_ID::END_FONT_ITALIC        },
+      { StyleIdx::pedalFontUnderline,                 P_ID::BEGIN_FONT_UNDERLINE   },
+      { StyleIdx::pedalFontUnderline,                 P_ID::CONTINUE_FONT_UNDERLINE},
+      { StyleIdx::pedalFontUnderline,                 P_ID::END_FONT_UNDERLINE     },
       { StyleIdx::pedalTextAlign,                     P_ID::BEGIN_TEXT_ALIGN       },
       { StyleIdx::pedalTextAlign,                     P_ID::CONTINUE_TEXT_ALIGN    },
       { StyleIdx::pedalHookHeight,                    P_ID::BEGIN_HOOK_HEIGHT      },
@@ -1233,7 +1245,8 @@ SubStyle subStyleFromName(const QString& name)
             }
       if (name == "Technique")                  // compatibility
             return SubStyle::EXPRESSION;
-      qFatal("substyle <%s> not known", qPrintable(name));
+
+      qDebug("substyle <%s> not known", qPrintable(name));
       return SubStyle::DEFAULT;
       }
 

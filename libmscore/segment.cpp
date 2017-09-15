@@ -939,6 +939,19 @@ bool Segment::findAnnotationOrElement(ElementType type, int minTrack, int maxTra
       }
 
 //---------------------------------------------------------
+//   findAnnotation
+///  return true if an annotation of type type
+//---------------------------------------------------------
+
+bool Segment::findAnnotation(ElementType type, int minTrack, int maxTrack)
+      {
+      for (const Element* e : _annotations)
+            if (e->type() == type && e->track() >= minTrack && e->track() <= maxTrack)
+                  return true;
+      return false;
+      }
+
+//---------------------------------------------------------
 //   removeAnnotation
 //---------------------------------------------------------
 
@@ -1791,23 +1804,22 @@ void Segment::createShape(int staffIdx)
       Shape& s = _shapes[staffIdx];
       s.clear();
 
-#if 1
       if (segmentType() & (SegmentType::BarLine | SegmentType::EndBarLine | SegmentType::StartRepeatBarLine | SegmentType::BeginBarLine)) {
             BarLine* bl = toBarLine(element(0));
             if (bl) {
-                  qreal lw, rw;
-                  BarLine::layoutWidth(score(), bl->barLineType(), 1.0, &lw, &rw);
-                  qreal w = rw - lw;
+                  qreal w = BarLine::layoutWidth(score(), bl->barLineType());
                   s.add(QRectF(0.0, 0.0, w, spatium() * 4.0).translated(bl->pos()));
                   }
             return;
             }
-#endif
 
-      for (Element* e : _elist) {
-            if (e && e->vStaffIdx() == staffIdx)
+      for (int track = staffIdx * VOICES; track < (staffIdx + 1) * VOICES; ++track) {
+            Element* e = _elist[track];
+            if (e) {
                   s.add(e->shape().translated(e->pos()));
+                  }
             }
+
       for (Element* e : _annotations) {
             // probably only allow for lyrics and chordnames
             if (e->staffIdx() == staffIdx
@@ -1834,8 +1846,6 @@ qreal Segment::minRight() const
             distance = qMax(distance, sh.right());
       if (isClefType())
             distance += score()->styleP(StyleIdx::clefBarlineDistance);
-      else if (isEndBarLineType())
-            distance *= .5;
       return distance;
       }
 

@@ -554,7 +554,7 @@ ADD_CUSTOM_TARGET(mops2 DEPENDS ${PCH})
 ## Add subdirs
 ##
 subdirs(
-      mscore  awl bww2mxml share midi audiofile fluid mstyle libmscore synthesizer
+      mscore awl bww2mxml share midi audiofile fluid libmscore synthesizer
       effects thirdparty/rtf2html thirdparty/diff thirdparty/beatroot
       thirdparty/qzip thirdparty/kQOAuth
       )
@@ -639,8 +639,6 @@ include(Packaging)
 add_custom_target(lupdate
    COMMAND ${PROJECT_SOURCE_DIR}/build/gen-qt-projectfile ${PROJECT_SOURCE_DIR} > mscore.pro
    COMMAND Qt5::lupdate ${PROJECT_BINARY_DIR}/mscore.pro
-   COMMAND ${PROJECT_SOURCE_DIR}/build/gen-instruments-projectfile ${PROJECT_SOURCE_DIR}/share/instruments > instruments.pro
-   COMMAND Qt5::lupdate ${PROJECT_BINARY_DIR}/instruments.pro
    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
    )
 

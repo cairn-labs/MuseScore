@@ -123,16 +123,15 @@
             <string>4</string>
             </Note>
           </Chord>
-        <Chord>
+        <StaffText>
           <lid>8</lid>
+          <text>Text</text>
+          </StaffText>
+        <Chord>
+          <lid>9</lid>
           <durationType>quarter</durationType>
           <Note>
-            <lid>9</lid>
-            <Text>
-              <lid>10</lid>
-              <align>center,center</align>
-              <text>Text</text>
-              </Text>
+            <lid>10</lid>
             <pitch>50</pitch>
             <tpc>16</tpc>
             <fret>5</fret>
@@ -188,7 +187,6 @@
             <name>tab6StrCommon</name>
             <lines>6</lines>
             <lineDistance>1.5</lineDistance>
-            <stepOffset>2</stepOffset>
             <timesig>0</timesig>
             <durations>0</durations>
             <durationFontName>MuseScore Tab Modern</durationFontName>
@@ -307,16 +305,15 @@
               <string>4</string>
               </Note>
             </Chord>
-          <Chord>
+          <StaffText>
             <lid>8</lid>
+            <text>Text</text>
+            </StaffText>
+          <Chord>
+            <lid>9</lid>
             <durationType>quarter</durationType>
             <Note>
-              <lid>9</lid>
-              <Text>
-                <lid>10</lid>
-                <align>center,center</align>
-                <text>Text</text>
-                </Text>
+              <lid>10</lid>
               <pitch>50</pitch>
               <tpc>16</tpc>
               <fret>5</fret>
@@ -365,15 +362,10 @@
               </Note>
             </Chord>
           <Chord>
-            <lid>8</lid>
+            <lid>9</lid>
             <durationType>quarter</durationType>
             <Note>
-              <lid>9</lid>
-              <Text>
-                <lid>10</lid>
-                <align>center,center</align>
-                <text>Text</text>
-                </Text>
+              <lid>10</lid>
               <pitch>50</pitch>
               <tpc>16</tpc>
               <fret>5</fret>

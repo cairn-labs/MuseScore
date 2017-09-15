@@ -509,7 +509,6 @@ void Palette::applyPaletteElement(PaletteCell* cell)
                 || element->type() == ElementType::MARKER
                 || element->type() == ElementType::JUMP
                 || element->type() == ElementType::SPACER
-                || element->type() == ElementType::LAYOUT_BREAK
                 || element->type() == ElementType::VBOX
                 || element->type() == ElementType::HBOX
                 || element->type() == ElementType::TBOX
@@ -530,6 +529,10 @@ void Palette::applyPaletteElement(PaletteCell* cell)
                         if (m == last)
                               break;
                         }
+                  }
+            else if (element->type() == ElementType::LAYOUT_BREAK) {
+                  LayoutBreak* breakElement = static_cast<LayoutBreak*>(element);
+                  score->cmdToggleLayoutBreak(breakElement->layoutBreakType());
                   }
             else if (element->isClef() || element->isKeySig() || element->isTimeSig()) {
                   Measure* m1 = sel.startSegment()->measure();
@@ -674,6 +677,41 @@ void Palette::applyPaletteElement(PaletteCell* cell)
             }
       viewer->setDropTarget(0);
       mscore->endCmd();
+      }
+
+//---------------------------------------------------------
+//   keyPressEvent
+//---------------------------------------------------------
+
+void PaletteScrollArea::keyPressEvent(QKeyEvent* event)
+      {
+      QWidget* w = this->widget();
+      Palette* p = static_cast<Palette*>(w);
+      if (event->key() == Qt::Key_Right) {
+            int i = p->getSelectedIdx();
+            if (i == -1)
+                  p->setSelected(0);
+            i++;
+            if (i >= 0 && i < p->size())
+                  p->setSelected(i);
+            else
+                  p->setSelected(0);
+
+            p->update();
+            }
+      else if (event->key() == Qt::Key_Left) {
+            int i = p->getSelectedIdx();
+            if (i == -1)
+                  p->setSelected(p->size()-1);
+            i--;
+            if (i >= 0 && i < p->size())
+                  p->setSelected(i);
+            else
+                  p->setSelected(p->size()-1);
+
+            p->update();
+            }
+      QScrollArea::keyPressEvent(event);
       }
 
 //---------------------------------------------------------

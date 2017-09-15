@@ -1433,7 +1433,6 @@ static void checkDivider(bool left, System* s, qreal yOffset)
 static void layoutPage(Page* page, qreal restHeight)
       {
       Score* score  = page->score();
-      int gaps      = 0;
       int nsystems  = page->systems().size() - 1;
 
       QList<System*> sList;
@@ -1445,10 +1444,9 @@ static void layoutPage(Page* page, qreal restHeight)
             if (s1->vbox() || s2->vbox() || s1->hasFixedDownDistance())
                   continue;
             sList.push_back(s1);
-            ++gaps;
             }
 
-      if (!gaps || MScore::noVerticalStretch || score->layoutMode() == LayoutMode::SYSTEM) {
+      if (sList.empty() || MScore::noVerticalStretch || score->layoutMode() == LayoutMode::SYSTEM) {
             if (score->layoutMode() == LayoutMode::FLOAT) {
                   qreal y = restHeight * .5;
                   for (System* system : page->systems())
@@ -1472,8 +1470,10 @@ static void layoutPage(Page* page, qreal restHeight)
 
       std::sort(sList.begin(), sList.end(), [](System* a, System* b) { return a->distance() < b->distance(); });
 
+      qreal maxDist = score->styleP(StyleIdx::maxSystemDistance);
+
       qreal dist = sList[0]->distance();
-      for (int i = 1; i < sList.size() && restHeight > 0.0; ++i) {
+      for (int i = 1; i < sList.size(); ++i) {
             qreal ndist = sList[i]->distance();
             qreal fill = ndist - dist;
             dist       = ndist;
@@ -1485,9 +1485,24 @@ static void layoutPage(Page* page, qreal restHeight)
                         }
                   for (int k = 0; k < i; ++k) {
                         System* s = sList[k];
-                        s->setDistance(s->distance() + fill);
+                        qreal d = s->distance() + fill;
+                        if ((d - s->height()) > maxDist)
+                              d = qMax(maxDist + s->height(), s->distance());
+                        s->setDistance(d);
                         }
                   restHeight -= totalFill;
+                  if (restHeight <= 0)
+                        break;
+                  }
+            }
+      if (restHeight > 0.0) {
+            qreal fill = restHeight / sList.size();
+            for (int i = 0; i < sList.size(); ++i) {
+                  System* s = sList[i];
+                  qreal d = s->distance() + fill;
+                  if ((d - s->height()) > maxDist)
+                        d = qMax(maxDist + s->height(), s->distance());
+                  s->setDistance(d);
                   }
             }
 
@@ -2373,7 +2388,13 @@ void Score::getNextMeasure(LayoutContext& lc)
                                                 else if (!note->fixed()) {
                                                       note->undoChangeProperty(P_ID::HEAD_GROUP, int(drumset->noteHead(pitch)));
                                                       // note->setHeadGroup(drumset->noteHead(pitch));
-                                                      note->setLine(drumset->line(pitch));
+                                                      int _line = drumset->line(pitch);
+                                                      note->setLine(_line);
+
+                                                      StaffType* st = staff->staffType(segment.tick());
+                                                      int off  = st->stepOffset();
+                                                      qreal ld = st->lineDistance().val();
+                                                      note->rypos()  = (_line + off * 2.0) * spatium() * .5 * ld;
                                                       continue;
                                                       }
                                                 }
@@ -2977,7 +2998,7 @@ System* Score::collectSystem(LayoutContext& lc)
             system->setWidth(pos.x());
 
       //
-      // compute shape of measures
+      // compute measure shape
       //
 
       for (int si = 0; si < score()->nstaves(); ++si) {
@@ -2985,13 +3006,15 @@ System* Score::collectSystem(LayoutContext& lc)
                   if (!mb->isMeasure())
                         continue;
                   Measure* m = toMeasure(mb);
-                  m->staffShape(si).clear();
+                  Shape& ss  = m->staffShape(si);
+                  ss.clear();
+
                   for (Segment& s : m->segments()) {
                         if (s.isTimeSigType())       // hack: ignore time signatures
                               continue;
-                        m->staffShape(si).add(s.staffShape(si).translated(s.pos()));
+                        ss.add(s.staffShape(si).translated(s.pos()));
                         }
-                  m->staffShape(si).add(m->staffLines(si)->bbox());
+                  ss.add(m->staffLines(si)->bbox());
                   }
             }
 
@@ -3021,7 +3044,9 @@ System* Score::collectSystem(LayoutContext& lc)
                               ChordRest* cr = toChordRest(e);
                               if (isTopBeam(cr)) {
                                     cr->beam()->layout();
-                                    s->staffShape(cr->staffIdx()).add(cr->beam()->shape().translated(-(cr->segment()->pos()+mb->pos())));
+                                    Shape shape(cr->beam()->shape().translated(-(cr->segment()->pos()+mb->pos())));
+                                    s->staffShape(cr->staffIdx()).add(shape);
+                                    m->staffShape(cr->staffIdx()).add(shape.translated(s->pos()));
                                     }
                               if (e->isChord()) {
                                     for (Note* note : toChord(e)->notes()) {
@@ -3144,10 +3169,6 @@ System* Score::collectSystem(LayoutContext& lc)
                   if (sp->isOttava())
                         continue;
                   if (sp->tick() < etick && sp->tick2() > stick) {
-//                        if (sp->isOttava() && sp->ticks() == 0) {       // sanity check?
-//                              sp->setTick2(lastMeasure()->endTick());
-//                              sp->staff()->updateOttava();
-//                              }
                         SpannerSegment* ss = sp->layoutSystem(system);     // create/layout spanner segment for this system
                         if (ss->isVoltaSegment() && ss->autoplace())
                               voltaSegments.push_back(ss);
@@ -3207,6 +3228,7 @@ System* Score::collectSystem(LayoutContext& lc)
                         sp->layoutSystem(system);     // create/layout spanner segment for this system
                         }
                   }
+
             //
             // add ottava shapes to staff shapes
             //
@@ -3434,8 +3456,7 @@ void LayoutContext::collectPage()
                   m->layout2();
                   }
             }
-//      printf("%p ====set rebuild\n", page);
-//      page->rebuildBspTree();
+      page->rebuildBspTree();
       }
 
 //---------------------------------------------------------
@@ -3445,9 +3466,6 @@ void LayoutContext::collectPage()
 
 void Score::doLayout()
       {
-//      qDeleteAll(_systems);
-//      _systems.clear();
-
       doLayoutRange(0, -1);
       }
 
@@ -3457,16 +3475,19 @@ void Score::doLayout()
 
 void Score::doLayoutRange(int stick, int etick)
       {
-      if (!firstMeasure())
+      if (!last()) {
+            qDeleteAll(_systems);
+            _systems.clear();
+            qDeleteAll(pages());
+            pages().clear();
             return;
-
+            }
 qDebug("%p %d-%d %s systems %d", this, stick, etick, isMaster() ? "Master" : "Part", int(_systems.size()));
-
-      bool layoutAll = stick <= 0 && (etick < 0 || etick >= lastMeasure()->endTick());
+      bool layoutAll = stick <= 0 && (etick < 0 || etick >= last()->endTick());
       if (stick < 0)
             stick = 0;
       if (etick < 0)
-            etick = lastMeasure()->endTick();
+            etick = last()->endTick();
 
       LayoutContext lc;
       lc.endTick     = etick;
@@ -3617,7 +3638,6 @@ void LayoutContext::layout()
       {
       for (;;) {
             collectPage();
-            page->rebuildBspTree();
             System* s      = page->system(0);
             MeasureBase* m = s->measures().back();
             if (!curSystem || (rangeDone && m->tick() > endTick))

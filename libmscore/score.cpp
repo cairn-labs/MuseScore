@@ -672,9 +672,7 @@ void Score::dragPosition(const QPointF& p, int* rst, Segment** seg) const
 void Score::setShowInvisible(bool v)
       {
       _showInvisible = v;
-//      rebuildBspTree();
       setUpdateAll();
-//      update();
       }
 
 //---------------------------------------------------------
@@ -685,7 +683,6 @@ void Score::setShowUnprintable(bool v)
       {
       _showUnprintable = v;
       setUpdateAll();
-//      update();
       }
 
 //---------------------------------------------------------
@@ -696,7 +693,6 @@ void Score::setShowFrames(bool v)
       {
       _showFrames = v;
       setUpdateAll();
-//      update();
       }
 
 //---------------------------------------------------------
@@ -707,7 +703,6 @@ void Score::setShowPageborders(bool v)
       {
       _showPageborders = v;
       setUpdateAll();
-//      update();
       }
 
 //---------------------------------------------------------
@@ -718,7 +713,6 @@ void Score::setMarkIrregularMeasures(bool v)
       {
       _markIrregularMeasures = v;
       setUpdateAll();
-//      update();
       }
 
 //---------------------------------------------------------
@@ -2950,10 +2944,10 @@ void Score::collectMatch(void* data, Element* e)
       if ((p->staffStart != -1)
          && ((p->staffStart > e->staffIdx()) || (p->staffEnd <= e->staffIdx())))
             return;
-      if (e->isChord() || e->isRest() || e->isArticulation() || e->isAccidental() || e->isLyrics() || e->isBeam() || e->isHook() || e->isStem() || e->isSlurSegment() || e->isNoteDot() || e->isFingering() || e->isTuplet()) {
-            if (p->voice != -1 && p->voice != e->voice())
-                  return;
-            }
+
+      if (p->voice != -1 && p->voice != e->voice())
+            return;
+
       if (p->system) {
             Element* ee = e;
             do {
@@ -3388,7 +3382,6 @@ void Score::appendPart(const QString& name)
                   }
             undoInsertStaff(staff, i);
             }
-
       part->staves()->front()->setBarLineSpan(part->nstaves());
       undoInsertPart(part, n);
       fixTicks();

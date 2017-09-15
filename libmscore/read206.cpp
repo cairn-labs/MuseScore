@@ -87,7 +87,7 @@ struct StyleVal2 {
       { StyleIdx::doubleBarWidth,              QVariant(0.16) },
       { StyleIdx::endBarWidth,                 QVariant(0.5) },       // 0.5
       { StyleIdx::doubleBarDistance,           QVariant(0.30) },
-      { StyleIdx::endBarDistance,              QVariant(0.40) },     // 0.3
+      { StyleIdx::endBarDistance,              QVariant(0.65) },     // 0.3
       { StyleIdx::repeatBarTips,               QVariant(false) },
       { StyleIdx::startBarlineSingle,          QVariant(false) },
       { StyleIdx::startBarlineMultiple,        QVariant(true) },
@@ -467,8 +467,6 @@ static void readTextStyle(MStyle* style, XmlReader& e)
             { "Rehearsal Mark",          SubStyle::REHEARSAL_MARK },
             { "Repeat Text Left",        SubStyle::REPEAT_LEFT },
             { "Repeat Text Right",       SubStyle::REPEAT_RIGHT },
-            { "Repeat Text",             SubStyle::REPEAT_LEFT },
-//            { "Volta",                   SubStyle::VOLTA },
             { "Frame",                   SubStyle::FRAME },
             { "Text Line",               SubStyle::TEXTLINE },
             { "Glissando",               SubStyle::GLISSANDO },
@@ -1019,6 +1017,19 @@ static void readText(XmlReader& e, Text* t, Element* be)
                   e.skipCurrentElement();
             else if (tag == "frame")
                   t->setHasFrame(e.readBool());
+            else if (tag == "halign") {
+                  Align align = Align(int(t->align()) & int(~(Align::HCENTER | Align::RIGHT)));
+                  const QString& val(e.readElementText());
+                  if (val == "center")
+                        align = align | Align::HCENTER;
+                  else if (val == "right")
+                        align = align | Align::RIGHT;
+                  else if (val == "left")
+                        ;
+                  else
+                        qDebug("readText: unknown alignment: <%s>", qPrintable(val));
+                  t->setAlign(align);
+                  }
             else if (!t->readProperties(e))
                   e.unknown();
             }
@@ -1034,7 +1045,8 @@ static bool readTextLineProperties(XmlReader& e, TextLineBase* tl)
 
       if (tag == "beginText") {
             Text* text = new Text(tl->score());
-            readText(e, text, tl);
+//            readText(e, text, tl);
+            readText(e, text, text);
             tl->setBeginText(text->xmlText());
             delete text;
             }

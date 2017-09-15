@@ -58,8 +58,6 @@
 #include "timeline.h"
 #include "importmidi/importmidi_panel.h"
 #include "libmscore/chord.h"
-#include "mstyle/mstyle.h"
-#include "mstyle/mconfig.h"
 #include "libmscore/segment.h"
 #include "editraster.h"
 #include "pianotools.h"
@@ -1156,7 +1154,11 @@ MuseScore::MuseScore()
       menuFormat->setObjectName("Format");
 
       menuFormat->addAction(getAction("edit-style"));
-      menuFormat->addAction(getAction("page-settings"));
+      QAction* pageSettingsAction = getAction("page-settings");
+      // in some locale (fr), page settings ends up in Application menu on mac
+      // this line prevents it.
+      pageSettingsAction->setMenuRole(QAction::NoRole);
+      menuFormat->addAction(pageSettingsAction);
       menuFormat->addSeparator();
 
       menuFormat->addAction(getAction("add-remove-breaks"));
@@ -1253,6 +1255,10 @@ MuseScore::MuseScore()
       a->setChecked(true);
       menuDebug->addAction(a);
       a = getAction("relayout");
+      menuDebug->addAction(a);
+      a = getAction("autoplace-slurs");
+      a->setCheckable(true);
+      a->setChecked(MScore::autoplaceSlurs);
       menuDebug->addAction(a);
 #endif
 
@@ -1761,6 +1767,8 @@ void MuseScore::setCurrentScoreView(ScoreView* view)
       {
       cv = view;
       if (cv) {
+            if (timeline())
+                  timeline()->setScoreView(cv);
             if (cv->score() && (cs != cv->score())) {
                   // exit note entry mode
                   if (cv->noteEntryMode()) {
@@ -3278,8 +3286,25 @@ void MuseScore::changeState(ScoreState val)
       else {
             if (e->isText()) {
                   textTools()->updateTools(cv->getEditData());
-                  if (!(e->isFiguredBass() || e->isHarmony()))   // do not show text tools for f.b.
+                  if (!(e->isFiguredBass() || e->isHarmony())) {  // do not show text tools for f.b.
+                        if (timelineScrollArea() && timelineScrollArea()->isVisible()) {
+                              if (dockWidgetArea(timelineScrollArea()) != dockWidgetArea(textTools()) || timelineScrollArea()->isFloating()) {
+                                    QSizePolicy policy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+                                    textTools()->widget()->setSizePolicy(policy);
+                                    }
+                              else {
+                                    QSizePolicy policy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+                                    textTools()->widget()->setSizePolicy(policy);
+                                    }
+                              }
+                        else {
+                              QSizePolicy policy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+                              textTools()->widget()->setSizePolicy(policy);
+                              }
+                        if (timelineScrollArea())
+                              splitDockWidget(textTools(), timelineScrollArea(), Qt::Vertical);
                         textTools()->show();
+                        }
                   }
             if (_inspector)
                   _inspector->update(e->score());
@@ -5089,6 +5114,13 @@ void MuseScore::cmd(QAction* a, const QString& cmd)
                   cs->update();
                   }
             }
+      else if (cmd == "autoplace-slurs") {
+            MScore::autoplaceSlurs = a->isChecked();
+            if (cs) {
+                  cs->setLayoutAll();
+                  cs->update();
+                  }
+            }
 #endif
       else {
             if (cv) {
@@ -5294,6 +5326,8 @@ void MuseScore::showDrumTools(const Drumset* drumset, Staff* staff)
                   _drumTools = new DrumTools(this);
                   addDockWidget(Qt::BottomDockWidgetArea, _drumTools);
                   }
+            if (timelineScrollArea())
+                  splitDockWidget(_drumTools, timelineScrollArea(), Qt::Vertical);
             _drumTools->setDrumset(cs, staff, drumset);
             _drumTools->show();
             }
@@ -6076,20 +6110,12 @@ int main(int argc, char* av[])
       if (!converterMode && !pluginMode) {
 
             // set UI Theme
-            if (preferences.isOxygen()) {
-                  MgStyleConfigData::animationsEnabled = preferences.animations;
-                  QApplication::setStyle(new MgStyle);
-            } else
-                  QApplication::setStyle(QStyleFactory::create("Fusion"));
+            QApplication::setStyle(QStyleFactory::create("Fusion"));
 
             QString wd      = QString("%1/%2").arg(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)).arg(QCoreApplication::applicationName());
             // set UI Color Palette
             QPalette p(QApplication::palette());
-            QString jsonPaletteFilename = "palette_light_fusion.json";
-            if (preferences.isThemeDark())
-                  jsonPaletteFilename = preferences.isOxygen() ? "palette_dark_oxygen.json" : "palette_dark_fusion.json";
-            else
-                  jsonPaletteFilename = preferences.isOxygen() ? "palette_light_oxygen.json" : "palette_light_fusion.json";
+            QString jsonPaletteFilename = preferences.isThemeDark() ? "palette_dark_fusion.json" : "palette_light_fusion.json";;
             QFile jsonPalette(QString(":/themes/%1").arg(jsonPaletteFilename));
             // read from Documents TODO: remove this
             if (QFile::exists(QString("%1/%2").arg(wd, "ms_palette.json")))
@@ -6108,11 +6134,7 @@ int main(int argc, char* av[])
 
             // set UI Style
             QString css;
-            QString styleFilename("style_light_fusion.css");
-            if (preferences.isThemeDark())
-                  styleFilename = preferences.isOxygen() ? "style_dark_oxygen.css" : "style_dark_fusion.css";
-            else
-                  styleFilename = preferences.isOxygen() ? "style_light_oxygen.css" : "style_light_fusion.css";
+            QString styleFilename = preferences.isThemeDark() ? "style_dark_fusion.css" : "style_light_fusion.css";
             QFile fstyle(QString(":/themes/%1").arg(styleFilename));
             // read from Documents TODO: remove this
             if (QFile::exists(QString("%1/%2").arg(wd, "ms_style.css")))
@@ -6219,9 +6241,10 @@ int main(int argc, char* av[])
                   for (auto ws : Workspace::workspaces()) {
                         if (ws->name().compare(sw->workspace()) == 0) {
                               mscore->changeWorkspace(ws);
+                              preferences.workspace = ws->name();
                               mscore->getPaletteBox()->updateWorkspaces();
+                              }
                         }
-                  }
                   delete sw;
                   }
             QString keyboardLayout = s.value("keyboardLayout").toString();
