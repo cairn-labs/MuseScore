@@ -40,11 +40,10 @@ int markerTypeTableSize()
 //---------------------------------------------------------
 
 Marker::Marker(Score* s)
-   : Text(s)
+   : Text(SubStyle::REPEAT_LEFT, s)
       {
       _markerType = Type::FINE;
       setFlags(ElementFlag::MOVABLE | ElementFlag::SELECTABLE | ElementFlag::ON_STAFF);
-      setTextStyleType(TextStyleType::REPEAT_LEFT);
       setLayoutToParentWidth(true);
       }
 
@@ -84,13 +83,13 @@ void Marker::setMarkerType(Type t)
 
             case Type::FINE:
                   txt = "Fine";
-                  setTextStyleType(TextStyleType::REPEAT_RIGHT);
+                  initSubStyle(SubStyle::REPEAT_RIGHT);
                   setLabel("fine");
                   break;
 
             case Type::TOCODA:
                   txt = "To Coda";
-                  setTextStyleType(TextStyleType::REPEAT_RIGHT);
+                  initSubStyle(SubStyle::REPEAT_RIGHT);
                   setLabel("coda");
                   break;
 
@@ -134,7 +133,7 @@ void Marker::adjustReadPos()
                   uo = userOff();
                   uo.rx() -= segment()->pos().x();
                   // 1.2 is always HCENTER aligned
-                  if ((textStyle().align() & AlignmentFlags::HMASK) == 0)    // AlignmentFlags::LEFT
+                  if ((textStyle().align() & Align::HMASK) == 0)    // Align::LEFT
                         uo.rx() -= bbox().width() * .5;
                   }
             else
@@ -175,11 +174,11 @@ Marker::Type Marker::markerType(const QString& s) const
 
 void Marker::layout()
       {
-      setPos(textStyle().offset(spatium()));
+      setPos(QPointF(0.0, score()->styleP(StyleIdx::markerPosAbove)));
       Text::layout1();
       // although normally laid out to parent (measure) width,
       // force to center over barline if left-aligned
-      if (layoutToParentWidth() && !(textStyle().align() & (AlignmentFlags::RIGHT|AlignmentFlags::HCENTER)))
+      if (layoutToParentWidth() && !(align() & (Align::RIGHT|Align::HCENTER)))
             rxpos() -= width() * 0.5;
       adjustReadPos();
       }
@@ -209,7 +208,7 @@ void Marker::read(XmlReader& e)
 //   write
 //---------------------------------------------------------
 
-void Marker::write(Xml& xml) const
+void Marker::write(XmlWriter& xml) const
       {
       xml.stag(name());
       Text::writeProperties(xml);
@@ -295,10 +294,10 @@ QVariant Marker::propertyDefault(P_ID propertyId) const
 
 
 //---------------------------------------------------------
-//   nextElement
+//   nextSegmentElement
 //---------------------------------------------------------
 
-Element* Marker::nextElement()
+Element* Marker::nextSegmentElement()
       {
       Segment* seg;
       if (markerType() == Marker::Type::FINE) {
@@ -310,17 +309,17 @@ Element* Marker::nextElement()
             seg = prevMeasure->last();
             return seg->firstElement(staffIdx());
             }
-      return Element::nextElement();
+      return Element::nextSegmentElement();
       }
 
 //---------------------------------------------------------
-//   prevElement
+//   prevSegmentElement
 //---------------------------------------------------------
 
-Element* Marker::prevElement()
+Element* Marker::prevSegmentElement()
       {
       //it's the same barline
-      return nextElement();
+      return nextSegmentElement();
       }
 
 //---------------------------------------------------------

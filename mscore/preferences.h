@@ -117,6 +117,10 @@ struct Preferences {
       int alsaFragments;
       int portaudioDevice;
       QString portMidiInput;
+      QString portMidiOutput;
+      int portMidiInputBufferCount;
+      int portMidiOutputBufferCount;
+      int portMidiOutputLatencyMilliseconds;
 
       bool antialiasedDrawing;
       SessionStart sessionStart;
@@ -173,10 +177,12 @@ struct Preferences {
       QString myTemplatesPath;
       QString myPluginsPath;
       QString mySoundfontsPath;
+      QString myShortcutPath;
 
       bool nativeDialogs;
 
       int exportAudioSampleRate;
+      int exportMp3BitRate;
 
       QString workspace;
       int exportPdfDpi;

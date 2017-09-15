@@ -64,7 +64,7 @@ struct RenderAction;
 class HDegree;
 
 class Harmony : public Text {
-      Q_OBJECT
+      Q_GADGET
       Q_PROPERTY(int baseTpc  READ baseTpc  WRITE setBaseTpc)
       Q_PROPERTY(int id  READ id  WRITE setId)
       Q_PROPERTY(int rootTpc  READ rootTpc  WRITE setRootTpc)
@@ -96,14 +96,14 @@ class Harmony : public Text {
       void render(const QString&, qreal&, qreal&);
       void render(const QList<RenderAction>& renderList, qreal&, qreal&, int tpc, NoteSpellingType noteSpelling = NoteSpellingType::STANDARD, NoteCaseType noteCase = NoteCaseType::AUTO);
       virtual void styleChanged() override     { render(); }
-      virtual void setTextStyle(const TextStyle& st) override;
+//      virtual void setTextStyle(const TextStyle& st) override;
 
    public:
       Harmony(Score* = 0);
       Harmony(const Harmony&);
       ~Harmony();
       virtual Harmony* clone() const override     { return new Harmony(*this); }
-      virtual Element::Type type() const override { return Element::Type::HARMONY; }
+      virtual ElementType type() const override { return ElementType::HARMONY; }
       virtual bool systemFlag() const override    { return false;  }
 
       void setId(int d)                        { _id = d; }
@@ -131,9 +131,9 @@ class Harmony : public Text {
       void setbboxtight(const QRectF& r) const { _tbbox = r;           }
 
       virtual bool isEditable() const override { return true; }
-      virtual void startEdit(MuseScoreView*, const QPointF&) override;
-      virtual bool edit(MuseScoreView*, Grip, int key, Qt::KeyboardModifiers, const QString& s) override;
-      virtual void endEdit() override;
+      virtual void startEdit(EditData&) override;
+      virtual bool edit(EditData&) override;
+      virtual void endEdit(EditData&) override;
 
       QString hUserName() const                { return _userName;     }
       QString hTextName() const                { return _textName;     }
@@ -151,7 +151,7 @@ class Harmony : public Text {
       const QList<HDegree>& degreeList() const;
       const ParsedChord* parsedForm();
 
-      virtual void write(Xml& xml) const override;
+      virtual void write(XmlWriter& xml) const override;
       virtual void read(XmlReader&) override;
       QString harmonyName() const;
       void render(const TextStyle* ts = 0);
@@ -176,13 +176,16 @@ class Harmony : public Text {
       virtual void spatiumChanged(qreal oldValue, qreal newValue) override;
       virtual void localSpatiumChanged(qreal oldValue, qreal newValue) override;
       void setHarmony(const QString& s);
-      virtual QPainterPath outline() const override;
       void calculateBoundingRect();
 
       virtual QString accessibleInfo() const override;
       virtual QString screenReaderInfo() const override;
-      };
 
+      virtual bool acceptDrop(EditData&) const override;
+      virtual Element* drop(EditData&) override;
+
+      virtual QVariant propertyDefault(P_ID id) const override;
+      };
 
 }     // namespace Ms
 #endif

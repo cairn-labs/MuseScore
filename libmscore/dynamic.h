@@ -29,7 +29,7 @@ class Segment;
 //-----------------------------------------------------------------------------
 
 class Dynamic : public Text {
-      Q_OBJECT
+      Q_GADGET
       Q_PROPERTY(Ms::Dynamic::Range range  READ dynRange  WRITE undoSetDynRange)
 
    public:
@@ -76,13 +76,13 @@ class Dynamic : public Text {
       int _velocity;     // associated midi velocity 0-127
       Range _dynRange;   // STAFF, PART, SYSTEM
 
-      virtual QRectF drag(EditData*) override;
+      virtual QRectF drag(EditData&) override;
 
    public:
       Dynamic(Score*);
       Dynamic(const Dynamic&);
       virtual Dynamic* clone() const override     { return new Dynamic(*this); }
-      virtual Element::Type type() const override { return Element::Type::DYNAMIC; }
+      virtual ElementType type() const override { return ElementType::DYNAMIC; }
       Segment* segment() const                    { return (Segment*)parent(); }
       Measure* measure() const                    { return (Measure*)parent()->parent(); }
 
@@ -94,12 +94,12 @@ class Dynamic : public Text {
       virtual QString subtypeName() const { return dynamicTypeName(); }
 
       virtual void layout() override;
-      virtual void write(Xml& xml) const override;
+      virtual void write(XmlWriter& xml) const override;
       virtual void read(XmlReader&) override;
 
       virtual bool isEditable() const override { return true; }
-      virtual void startEdit(MuseScoreView*, const QPointF&) override;
-      virtual void endEdit() override;
+      virtual void startEdit(EditData&) override;
+      virtual void endEdit(EditData&) override;
       virtual void reset() override;
 
       void setVelocity(int v)   { _velocity = v;    }
@@ -113,6 +113,7 @@ class Dynamic : public Text {
       virtual QVariant propertyDefault(P_ID id) const override;
 
       virtual QString accessibleInfo() const override;
+      virtual QString screenReaderInfo() const override;
       void doAutoplace();
       };
 

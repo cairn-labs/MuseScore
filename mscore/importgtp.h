@@ -175,15 +175,15 @@ class GuitarPro {
       int key;
 
       QMap<int, QList<GPFermata>*> fermatas;
-      Ottava** ottava;
+      std::vector<Ottava*> ottava;
       Hairpin** hairpins;
       Score* score;
       QFile* f;
       int curPos;
       int previousTempo;
       int previousDynamic;
-      int ottavaFound;
-      QString ottavaValue;
+      std::vector<int> ottavaFound;
+      std::vector<QString> ottavaValue;
       int tempo;
       QMap<int,int> slides;
 
@@ -221,7 +221,7 @@ class GuitarPro {
       void createOttava(bool hasOttava, int track, ChordRest* cr, QString value);
       void createSlide(int slide, ChordRest* cr, int staffIdx);
       void createCrecDim(int staffIdx, int track, int tick, bool crec);
-      void addTextToNote(QString string, TextStyle textStyle, Note* note);
+      Text* addTextToNote(QString, Align, Note*);
       void addPalmMute(Note* note);
       void addLetRing(Note* note);
       void addTap(Note* note);
@@ -351,8 +351,9 @@ class GuitarPro6 : public GuitarPro {
             QDomNode notes;
             QDomNode rhythms;
             };
-      // a mapping from identifiers to fret diagrams
-      QMap<int, FretDiagram*> fretDiagrams;
+      // a mapping from identifiers to fret diagrams by tracks
+      QMap<int, QMap<int, FretDiagram*>> fretDiagrams;
+      QMap<int, QMap<int, QString>> chordnames;
       void parseFile(char* filename, QByteArray* data);
       int readBit();
       QByteArray getBytes(QByteArray* buffer, int offset, int length);
@@ -363,7 +364,7 @@ class GuitarPro6 : public GuitarPro {
       int readBitsReversed(int bitsToRead);
       void readGpif(QByteArray* data);
       void readScore(QDomNode* metadata);
-      void readChord(QDomNode* diagram, int track);
+      void readFretboardDiagram(QDomNode* diagram, int track);
       int findNumMeasures(GPPartInfo* partInfo);
       void readMasterTracks(QDomNode* masterTrack);
       void readDrumNote(Note* note, int element, int variation);

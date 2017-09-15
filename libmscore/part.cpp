@@ -57,7 +57,6 @@ Staff* Part::staff(int idx) const
       return _staves[idx];
       }
 
-
 //---------------------------------------------------------
 //   readProperties
 //---------------------------------------------------------
@@ -97,9 +96,7 @@ bool Part::readProperties(XmlReader& e)
 void Part::read(XmlReader& e)
       {
       while (e.readNextStartElement()) {
-            if (readProperties(e))
-                 ;
-            else
+            if (!readProperties(e))
                   e.unknown();
             }
       if (_partName.isEmpty())
@@ -110,7 +107,7 @@ void Part::read(XmlReader& e)
 //   write
 //---------------------------------------------------------
 
-void Part::write(Xml& xml) const
+void Part::write(XmlWriter& xml) const
       {
       xml.stag("Part");
       foreach(const Staff* staff, _staves)
@@ -471,7 +468,7 @@ void Part::setShortName(const QString& s)
 
 void Part::setPlainLongName(const QString& s)
       {
-      setLongName(Xml::xmlString(s));
+      setLongName(XmlWriter::xmlString(s));
       }
 
 //---------------------------------------------------------
@@ -480,7 +477,7 @@ void Part::setPlainLongName(const QString& s)
 
 void Part::setPlainShortName(const QString& s)
       {
-      setShortName(Xml::xmlString(s));
+      setShortName(XmlWriter::xmlString(s));
       }
 
 //---------------------------------------------------------
@@ -602,7 +599,7 @@ int Part::lyricCount()
       if (!score())
             return 0;
       int count = 0;
-      Segment::Type st = Segment::Type::ChordRest;
+      SegmentType st = SegmentType::ChordRest;
       for (Segment* seg = score()->firstMeasure()->first(st); seg; seg = seg->next1(st)) {
             for (int i = startTrack(); i < endTrack() ; ++i) {
                   ChordRest* cr = toChordRest(seg->element(i));
@@ -622,10 +619,10 @@ int Part::harmonyCount()
       if (!score())
             return 0;
       int count = 0;
-      Segment::Type st = Segment::Type::ChordRest;
+      SegmentType st = SegmentType::ChordRest;
       for (Segment* seg = score()->firstMeasure()->first(st); seg; seg = seg->next1(st)) {
             for (Element* e : seg->annotations()) {
-                  if (e->type() == Element::Type::HARMONY && e->track() >= startTrack() && e->track() < endTrack())
+                  if (e->type() == ElementType::HARMONY && e->track() >= startTrack() && e->track() < endTrack())
                         count++;
                   }
             }
@@ -641,7 +638,7 @@ bool Part::hasPitchedStaff()
       if (!staves())
             return false;
       for (Staff* s : *staves()) {
-            if (s && s->isPitchedStaff())
+            if (s && s->isPitchedStaff(0))
                   return true;
             }
       return false;
@@ -656,7 +653,7 @@ bool Part::hasTabStaff()
       if (!staves())
             return false;
       for (Staff* s : *staves()) {
-            if (s && s->isTabStaff())
+            if (s && s->isTabStaff(0))
                   return true;
             }
       return false;
@@ -671,7 +668,7 @@ bool Part::hasDrumStaff()
       if (!staves())
             return false;
       for (Staff* s : *staves()) {
-            if (s && s->isDrumStaff())
+            if (s && s->isDrumStaff(0))
                   return true;
             }
       return false;

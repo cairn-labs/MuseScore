@@ -253,11 +253,11 @@
     <seq>Ctrl+End</seq>
     </SC>
   <SC>
-    <key>next-element</key>
+    <key>next-segment-element</key>
     <seq>Ctrl+Alt+Shift+Right</seq>
     </SC>
   <SC>
-    <key>prev-element</key>
+    <key>prev-segment-element</key>
     <seq>Ctrl+Alt+Shift+Left</seq>
     </SC>
   <SC>
@@ -527,7 +527,7 @@
     <seq>F11</seq>
     </SC>
   <SC>
-    <key>toggle-navigator</key>
+    <key>toggle-timeline</key>
     <seq>F12</seq>
     </SC>
   <SC>
@@ -675,15 +675,23 @@
     <seq>Q</seq>
     </SC>
   <SC>
+    <key>inc-duration-dotted</key>
+    <seq>Shift+W</seq>
+    </SC>
+  <SC>
+    <key>dec-duration-dotted</key>
+    <seq>Shift+Q</seq>
+    </SC>
+  <SC>
     <key>repeat-sel</key>
     <seq>R</seq>
     </SC>
   <SC>
-    <key>enh-up</key>
+    <key>enh-both</key>
     <seq>J</seq>
     </SC>
   <SC>
-    <key>enh-down</key>
+    <key>enh-current</key>
     <seq>Ctrl+J</seq>
     </SC>
   <SC>
@@ -724,14 +732,6 @@
   <SC>
     <key>figured-bass</key>
     <seq>Ctrl+G</seq>
-    </SC>
-  <SC>
-    <key>transpose-up</key>
-    <seq>F2</seq>
-    </SC>
-  <SC>
-    <key>transpose-down</key>
-    <seq>Shift+F2</seq>
     </SC>
   <SC>
     <key>masterpalette</key>
@@ -967,6 +967,10 @@
     <seq>Ctrl+Left</seq>
     </SC>
   <SC>
+    <key>relayout</key>
+    <seq>Shift+L</seq>
+    </SC>
+  <SC>
     <key>text-word-right</key>
     <seq>Ctrl+Right</seq>
     </SC>
@@ -985,6 +989,10 @@
   <SC>
     <key>viewmode</key>
     <seq>Ctrl+Shift+V</seq>
+    </SC>
+  <SC>
+    <key>toggle-insert-mode</key>
+    <seq>Ctrl+I</seq>
     </SC>
 
   </Shortcuts>

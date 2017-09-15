@@ -7,9 +7,12 @@ else
 fi
 
 for a in undoAddLineBreaks \
-   undoExplode undoImplode undoImplodeVoice undoSlashFill \
-   undoSlashRhythm undoResequenceAlpha undoResequenceNumeric \
-   undoChangeVoice undoResequencePart undoSlashFill undoSlashRhythm \
+   undoSlashFill \
+   undoSlashRhythm \
+   undoResequenceAlpha \
+   undoResequenceNumeric \
+   undoResequencePart undoSlashFill undoSlashRhythm \
+   undoResequencePart \
    undoResequenceMeasure; do
       echo ${a}
       cp $S/${a}01-test.mscx ${a}01-ref.mscx

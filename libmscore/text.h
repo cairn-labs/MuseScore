@@ -14,25 +14,25 @@
 #define __SIMPLETEXT_H__
 
 #include "element.h"
-#include "textstyle.h"
 #include "elementlayout.h"
+#include "property.h"
 
 namespace Ms {
 
 class MuseScoreView;
 struct SymCode;
 class Text;
+class TextBlock;
+class ChangeText;
 
-enum class CharFormatType : char { TEXT, SYMBOL };
 enum class VerticalAlignment : char { AlignNormal, AlignSuperScript, AlignSubScript };
-enum class FormatId : char { Bold, Italic, Underline, Valign, FontSize, FontFamily };
+enum class FormatId : char          { Bold, Italic, Underline, Valign, FontSize, FontFamily };
 
 //---------------------------------------------------------
 //   CharFormat
 //---------------------------------------------------------
 
 class CharFormat {
-      CharFormatType _type      { CharFormatType::TEXT };
       bool _bold                { false };
       bool _italic              { false };
       bool _underline           { false };
@@ -44,7 +44,6 @@ class CharFormat {
    public:
       CharFormat() {}
       bool operator==(const CharFormat&) const;
-      CharFormatType type() const            { return _type;        }
       bool bold() const                      { return _bold;        }
       bool italic() const                    { return _italic;      }
       bool underline() const                 { return _underline;   }
@@ -53,13 +52,12 @@ class CharFormat {
       qreal fontSize() const                 { return _fontSize;    }
       QString fontFamily() const             { return _fontFamily;  }
 
-      void setType(CharFormatType val)       { _type        = val;  }
       void setBold(bool val)                 { _bold        = val;  }
       void setItalic(bool val)               { _italic      = val;  }
       void setUnderline(bool val)            { _underline   = val;  }
       void setPreedit(bool val)              { _preedit     = val;  }
       void setValign(VerticalAlignment val)  { _valign      = val;  }
-      void setFontSize(qreal val)            { _fontSize    = val;  }
+      void setFontSize(qreal val)            { Q_ASSERT(val > 0.0); _fontSize = val; }
       void setFontFamily(const QString& val) { _fontFamily  = val;  }
 
       void setFormat(FormatId, QVariant);
@@ -74,54 +72,67 @@ class CharFormat {
 class TextCursor {
       Text*      _text;
       CharFormat _format;
-      int _line          { 0 };
+      int _row           { 0 };
       int _column        { 0 };
       int _selectLine    { 0 };         // start of selection
       int _selectColumn  { 0 };
 
    public:
-      TextCursor() {}
+      TextCursor(Text* t) : _text(t) {}
 
-      bool hasSelection() const { return (_selectLine != _line) || (_selectColumn != _column); }
+      Text* text() const        { return _text; }
+      bool hasSelection() const { return (_selectLine != _row) || (_selectColumn != _column); }
       void clearSelection();
 
       CharFormat* format()                { return &_format;  }
+      const CharFormat* format() const    { return &_format;  }
       void setFormat(const CharFormat& f) { _format = f;      }
 
-      int line() const              { return _line; }
+      int row() const               { return _row; }
       int column() const            { return _column; }
       int selectLine() const        { return _selectLine; }
       int selectColumn() const      { return _selectColumn; }
-      void setLine(int val)         { _line = val; }
+      void setRow(int val)          { _row = val; }
       void setColumn(int val)       { _column = val; }
       void setSelectLine(int val)   { _selectLine = val; }
       void setSelectColumn(int val) { _selectColumn = val; }
       void setText(Text* t)         { _text = t; }
       int columns() const;
-      void initFromStyle(const TextStyle& s);
+      void init();
+
+      TextBlock& curLine() const;
+      QRectF cursorRect() const;
+      bool movePosition(QTextCursor::MoveOperation op, QTextCursor::MoveMode mode = QTextCursor::MoveAnchor, int count = 1);
+      void moveCursorToEnd()   { movePosition(QTextCursor::End);   }
+      void moveCursorToStart() { movePosition(QTextCursor::Start); }
+      QChar currentCharacter() const;
+      bool set(const QPointF& p, QTextCursor::MoveMode mode = QTextCursor::MoveAnchor);
+      QString selectedText() const;
+      void updateCursorFormat();
+      void setFormat(FormatId, QVariant);
+      void changeSelectionFormat(FormatId id, QVariant val);
+      bool deleteChar() const;
       };
 
 class Text;
 
 //---------------------------------------------------------
 //   TextFragment
-//    contains a styled text of symbol with name "text"
+//    contains a styled text
 //---------------------------------------------------------
 
 class TextFragment {
 
    public:
       mutable CharFormat format;
-      QPointF pos;                  // y is relativ to TextBlock->y()
+      QPointF pos;                  // y is relative to TextBlock->y()
 
       mutable QString text;
-      QList<SymId> ids;
 
       bool operator ==(const TextFragment& f) const;
 
       TextFragment();
       TextFragment(const QString& s);
-      TextFragment(TextCursor*, SymId);
       TextFragment(TextCursor*, const QString&);
       TextFragment split(int column);
       void draw(QPainter*, const Text*) const;
@@ -136,7 +147,7 @@ class TextFragment {
 //---------------------------------------------------------
 
 class TextBlock {
-      QList<TextFragment> _text;
+      QList<TextFragment> _fragments;
       qreal  _y = 0;
       qreal _lineSpacing;
       QRectF _bbox;
@@ -146,185 +157,165 @@ class TextBlock {
 
    public:
       TextBlock() {}
-      bool operator ==(const TextBlock& x)         { return _text == x._text; }
-      bool operator !=(const TextBlock& x)         { return _text != x._text; }
+      bool operator ==(const TextBlock& x)         { return _fragments == x._fragments; }
+      bool operator !=(const TextBlock& x)         { return _fragments != x._fragments; }
       void draw(QPainter*, const Text*) const;
       void layout(Text*);
-      const QList<TextFragment>& fragments() const { return _text; }
-      QList<TextFragment>& fragments()             { return _text; }
+      const QList<TextFragment>& fragments() const { return _fragments; }
+      QList<TextFragment>& fragments()             { return _fragments; }
       const QRectF& boundingRect() const           { return _bbox; }
       QRectF boundingRect(int col1, int col2, const Text*) const;
       int columns() const;
       void insert(TextCursor*, const QString&);
-      void insert(TextCursor*, SymId);
-      void remove(int column);
+      QString remove(int column);
       QString remove(int start, int n);
       int column(qreal x, Text*) const;
       TextBlock split(int column);
       qreal xpos(int col, const Text*) const;
       const CharFormat* formatAt(int) const;
       const TextFragment* fragment(int col) const;
-      QList<TextFragment>::iterator fragment(int col, int* rcol);
-      qreal y() const      { return _y; }
-      void setY(qreal val) { _y = val; }
+      QList<TextFragment>::iterator fragment(int column, int* rcol, int* ridx);
+      qreal y() const           { return _y; }
+      void setY(qreal val)      { _y = val; }
       qreal lineSpacing() const { return _lineSpacing; }
       QString text(int, int) const;
-      bool eol() const      { return _eol; }
-      void setEol(bool val) { _eol = val; }
+      bool eol() const          { return _eol; }
+      void setEol(bool val)     { _eol = val; }
       void changeFormat(FormatId, QVariant val, int start, int n);
       };
 
 //---------------------------------------------------------
-//   @@ MText
-///    Graphic representation of a text.
-//
-//   @P text           string  the raw text
-//   @P textStyleType  enum   (TextStyleType.DEFAULT, .TITLE, .SUBTITLE, .COMPOSER, .POET, .LYRIC1, .LYRIC2, .FINGERING, .LH_GUITAR_FINGERING, .RH_GUITAR_FINGERING, .STRING_NUMBER, .INSTRUMENT_LONG, .INSTRUMENT_SHORT, .INSTRUMENT_EXCERPT, .DYNAMICS, .EXPRESSION, .TEMPO, .METRONOME, .MEASURE_NUMBER, .TRANSLATOR, .TUPLET, .SYSTEM, .STAFF, .HARMONY, .REHEARSAL_MARK, .REPEAT_LEFT, .REPEAT_RIGHT, .VOLTA, .FRAME, .TEXTLINE, .GLISSANDO, .OTTAVA, .PEDAL, .HAIRPIN, .BEND, .HEADER, .FOOTER, .INSTRUMENT_CHANGE, .FIGURED_BASS)
+//   Text
 //---------------------------------------------------------
 
 class Text : public Element {
-      Q_OBJECT
+      Q_GADGET
 
-      Q_PROPERTY(QString text READ xmlText WRITE undoSetText)
-      Q_PROPERTY(Ms::MSQE_TextStyleType::E textStyleType READ qmlTextStyleType WRITE qmlUndoSetTextStyleType)
+#define PROP(a,b,c)                                            \
+      a _ ## b;                                                \
+      PropertyFlags _ ## b ## Style { PropertyFlags::STYLED }; \
+   public:                                                     \
+      const a& b() const   { return _ ## b; }                  \
+      void c(const a& val) { _ ## b = val;  }                  \
+   private:
 
-      Q_ENUMS(Ms::MSQE_TextStyleType::E)
+      PROP(QString, family,                 setFamily)
+      PROP(qreal,   size,                   setSize)
+      PROP(bool,    bold,                   setBold)
+      PROP(bool,    italic,                 setItalic)
+      PROP(bool,    underline,              setUnderline)
+      PROP(QColor,  bgColor,                setBgColor)
+      PROP(QColor,  frameColor,             setFrameColor)
+      PROP(Align,   align,                  setAlign)
+      PROP(bool,    hasFrame,               setHasFrame)
+      PROP(bool,    circle,                 setCircle)
+      PROP(bool,    square,                 setSquare)
+      PROP(bool,    sizeIsSpatiumDependent, setSizeIsSpatiumDependent)
+      PROP(Spatium, frameWidth,             setFrameWidth)
+      PROP(Spatium, paddingWidth,           setPaddingWidth)
+      PROP(int,     frameRound,             setFrameRound)
+      PROP(QPointF, offset,                 setOffset)            // inch or spatium
+      PROP(OffsetType, offsetType,          setOffsetType)
+#undef PROP
+
+      SubStyle _subStyle;
+
+      // there are two representations of text; only one
+      // might be valid and the other can be constructed from it
 
       QString _text;
-      QString oldText;      // used to remember original text in edit mode
-      QString preEdit;
       QList<TextBlock> _layout;
-      TextStyleType _styleIndex;
+      bool textInvalid              { true  };
+      bool layoutInvalid            { true  };
 
+      QString preEdit;              // move to EditData?
       bool _layoutToParentWidth     { false };
-      bool _editMode                { false };
+
       int  hexState                 { -1    };
-      TextStyle _textStyle;
 
-      TextCursor* _cursor;       // used during editing
-
-      QRectF cursorRect() const;
-      const TextBlock& curLine() const;
-      TextBlock& curLine();
       void drawSelection(QPainter*, const QRectF&) const;
 
-      void insert(TextCursor*, QChar);
-      void insert(TextCursor*, SymId);
-      void updateCursorFormat(TextCursor*);
+      void insert(TextCursor*, uint code);
       void genText();
-      void changeSelectionFormat(FormatId id, QVariant val);
-      void setEditMode(bool val)              { _editMode = val;  }
-      void editInsertText(const QString&);
-      QChar currentCharacter() const;
+
+      PropertyFlags* propertyFlagsP(P_ID id);
 
    protected:
       QColor textColor() const;
-      QColor frameColor() const;
       QRectF frame;           // calculated in layout()
       void layoutFrame();
       void layoutEdit();
       void createLayout();
-      const TextBlock& textBlock(int line) { return _layout[line]; }
+      void insertSym(EditData& ed, SymId id);
 
    public:
       Text(Score* = 0);
+      Text(SubStyle, Score* = 0);
       Text(const Text&);
       ~Text();
 
+      SubStyle subStyle() const                    { return _subStyle; }
+      void setSubStyle(SubStyle ss)                { _subStyle = ss;   }
+      virtual void initSubStyle(SubStyle) override;
+
       virtual Text* clone() const override         { return new Text(*this); }
-      virtual Element::Type type() const override  { return Element::Type::TEXT; }
-      virtual bool mousePress(const QPointF&, QMouseEvent* ev) override;
+      virtual ElementType type() const override    { return ElementType::TEXT; }
+      virtual bool mousePress(EditData&) override;
 
       Text &operator=(const Text&) = delete;
 
       virtual void draw(QPainter*) const override;
-      virtual void setColor(const QColor& c) override;
-      virtual QColor color() const             { return textStyle().foregroundColor(); }
-
-      virtual void setTextStyle(const TextStyle& st);
-      const TextStyle& textStyle() const      { return _textStyle; }
-      TextStyle& textStyle()                  { return _textStyle; }
-      TextStyleType textStyleType() const     { return _styleIndex; }
-      void setTextStyleType(TextStyleType);
-      void restyle(TextStyleType);
-
-      Align align() const { return _textStyle.align(); }
-
-      Ms::MSQE_TextStyleType::E qmlTextStyleType() const { return static_cast<Ms::MSQE_TextStyleType::E>(_styleIndex); }
-      void qmlUndoSetTextStyleType(Ms::MSQE_TextStyleType::E st) { undoChangeProperty(P_ID::TEXT_STYLE_TYPE, int(st)); }
+      virtual void drawEditMode(QPainter* p, EditData& ed) override;
 
       void setPlainText(const QString&);
       void setXmlText(const QString&);
-      QString xmlText() const                 { return _text; }
-      QString plainText(bool noSym = false) const;
-      void insertText(const QString&);
+      QString xmlText() const;
+      QString plainText() const;
 
-      bool editMode() const                   { return _editMode; }
+      void insertText(EditData&, const QString&);
 
       virtual void layout() override;
       virtual void layout1();
-      void sameLayout();
       qreal lineSpacing() const;
       qreal lineHeight() const;
       virtual qreal baseLine() const override;
 
-      bool empty() const                { return _text.isEmpty(); }
-      void clear()                        { _text.clear();          }
+      bool empty() const                  { return xmlText().isEmpty(); }
+      void clear()                        { setXmlText(QString());      }
 
       bool layoutToParentWidth() const    { return _layoutToParentWidth; }
       void setLayoutToParentWidth(bool v) { _layoutToParentWidth = v;   }
 
-      void startEdit(MuseScoreView*, const QPointF&);
-      void endEdit();
-      bool edit(MuseScoreView*, Grip, int key, Qt::KeyboardModifiers, const QString&);
+      virtual void startEdit(EditData&) override;
+      virtual bool edit(EditData&) override;
+      virtual void editCut(EditData&) override;
+      virtual void editCopy(EditData&) override;
+      virtual void endEdit(EditData&) override;
 
-      void setFormat(FormatId, QVariant);
+      bool deleteSelectedText(EditData&);
 
-      bool deletePreviousChar();
-      bool deleteChar();
-      void deleteSelectedText();
+      void selectAll(TextCursor*);
 
-      bool movePosition(QTextCursor::MoveOperation op,
-         QTextCursor::MoveMode mode = QTextCursor::MoveAnchor, int count = 1);
-      bool setCursor(const QPointF& p,
-         QTextCursor::MoveMode mode = QTextCursor::MoveAnchor);
-      void moveCursorToEnd()   { movePosition(QTextCursor::End); }
-      void moveCursorToStart() { movePosition(QTextCursor::Start); }
-
-      QString selectedText() const;
-
-      void insertSym(SymId);
-      void selectAll();
-
-      virtual bool systemFlag() const     { return textStyle().systemFlag(); }
-
-      virtual void write(Xml& xml) const override;
+      virtual void write(XmlWriter& xml) const override;
       virtual void read(XmlReader&) override;
-      virtual void writeProperties(Xml& xml) const { writeProperties(xml, true, true); }
-      void writeProperties(Xml& xml, bool writeText) const { writeProperties(xml, writeText, true); }
-      void writeProperties(Xml&, bool, bool) const;
+      virtual void writeProperties(XmlWriter& xml) const { writeProperties(xml, true, true); }
+      void writeProperties(XmlWriter& xml, bool writeText) const { writeProperties(xml, writeText, true); }
+      void writeProperties(XmlWriter&, bool, bool) const;
       bool readProperties(XmlReader&);
 
       void spellCheckUnderline(bool) {}
       virtual void styleChanged() override;
 
-      virtual void paste();
+      virtual void paste(EditData&);
 
       QRectF pageRectangle() const;
 
-      TextCursor* cursor() { return _cursor; }
-
-      void setAbove(bool val) {  textStyle().setYoff(val ? -2.0 : 7.0); }
-      void dragTo(const QPointF&);
+      void dragTo(EditData&);
 
       virtual QLineF dragAnchor() const override;
 
-      QVariant getProperty(P_ID propertyId) const;
-      bool setProperty(P_ID propertyId, const QVariant& v);
-      virtual QVariant propertyDefault(P_ID id) const;
-
-      virtual bool acceptDrop(const DropData&) const override;
-      virtual Element* drop(const DropData&) override;
+      virtual bool acceptDrop(EditData&) const override;
+      virtual Element* drop(EditData&) override;
 
       friend class TextBlock;
       friend class TextFragment;
@@ -333,9 +324,11 @@ class Text : public Element {
       static QString convertToHtml(const QString&, const TextStyle&);
       static QString tagEscape(QString s);
       static QString unEscape(QString s);
+      static QString escape(QString s);
 
       void undoSetText(const QString& s) { undoChangeProperty(P_ID::TEXT, s); }
       virtual QString accessibleInfo() const override;
+      virtual QString screenReaderInfo() const override;
 
       virtual int subtype() const;
       virtual QString subtypeName() const;
@@ -347,12 +340,32 @@ class Text : public Element {
       void endHexState();
       void inputTransition(QInputMethodEvent*);
 
+      QFont font() const;
+      QFontMetricsF fontMetrics() const;
+
+      virtual QVariant getProperty(P_ID propertyId) const override;
+      virtual bool setProperty(P_ID propertyId, const QVariant& v) override;
+      virtual QVariant propertyDefault(P_ID id) const override;
+      virtual void setPropertyFlags(P_ID, PropertyFlags) override;
+      virtual PropertyFlags propertyFlags(P_ID) const override;
+      virtual void resetProperty(P_ID id) override;
+      virtual StyleIdx getPropertyStyle(P_ID) const override;
+      virtual void reset() override;
+
+      void editInsertText(TextCursor*, const QString&);
+
+      TextCursor* cursor(EditData&);
+      const TextBlock& textBlock(int line) const { return _layout[line]; }
+      TextBlock& textBlock(int line)             { return _layout[line]; }
+      QList<TextBlock>& textBlockList()          { return _layout; }
+      int rows() const                           { return _layout.size(); }
+
+      void setTextInvalid()                      { textInvalid = true;  };
+
       friend class TextCursor;
       };
 
 
 }     // namespace Ms
-
-Q_DECLARE_METATYPE(Ms::MSQE_TextStyleType::E);
 
 #endif

@@ -252,7 +252,7 @@ void PianorollEditor::setStaff(Staff* st)
             }
       staff = st;
       if (staff) {
-            setWindowTitle(tr("MuseScore: <%1> Staff: %2").arg(_score->masterScore()->fileInfo()->completeBaseName()).arg(st->idx()));
+            setWindowTitle(tr("<%1> Staff: %2").arg(_score->masterScore()->fileInfo()->completeBaseName()).arg(st->idx()));
             TempoMap* tl = _score->tempomap();
             TimeSigMap*  sl = _score->sigmap();
             for (int i = 0; i < 3; ++i)
@@ -580,16 +580,6 @@ void PianorollEditor::setCursor(const QCursor&)
 int PianorollEditor::gripCount() const
       {
       return 0;
-      }
-
-//---------------------------------------------------------
-//   getGrip
-//---------------------------------------------------------
-
-const QRectF& PianorollEditor::getGrip(Grip) const
-      {
-      static QRectF r;
-      return r;
       }
 
 //---------------------------------------------------------

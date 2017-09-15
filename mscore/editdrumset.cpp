@@ -40,17 +40,38 @@ enum Column : char { PITCH, NOTE, SHORTCUT, NAME };
 NoteHead::Group noteHeadNames[] = {
       NoteHead::Group::HEAD_NORMAL,
       NoteHead::Group::HEAD_CROSS,
-      NoteHead::Group::HEAD_DIAMOND,
-      NoteHead::Group::HEAD_TRIANGLE,
-      NoteHead::Group::HEAD_MI,
-      NoteHead::Group::HEAD_SLASH,
+      NoteHead::Group::HEAD_PLUS,
       NoteHead::Group::HEAD_XCIRCLE,
+      NoteHead::Group::HEAD_WITHX,
+      NoteHead::Group::HEAD_TRIANGLE_UP,
+      NoteHead::Group::HEAD_TRIANGLE_DOWN,
+      NoteHead::Group::HEAD_SLASH,
+      NoteHead::Group::HEAD_SLASHED1,
+      NoteHead::Group::HEAD_SLASHED2,
+      NoteHead::Group::HEAD_DIAMOND,
+      NoteHead::Group::HEAD_DIAMOND_OLD,
+      NoteHead::Group::HEAD_CIRCLED,
+      NoteHead::Group::HEAD_CIRCLED_LARGE,
+      NoteHead::Group::HEAD_LARGE_ARROW,
       NoteHead::Group::HEAD_DO,
       NoteHead::Group::HEAD_RE,
+      NoteHead::Group::HEAD_MI,
       NoteHead::Group::HEAD_FA,
       NoteHead::Group::HEAD_LA,
       NoteHead::Group::HEAD_TI,
       };
+
+//---------------------------------------------------------
+//   operator<
+//---------------------------------------------------------
+
+bool EditDrumsetTreeWidgetItem::operator<(const QTreeWidgetItem & other) const
+      {
+      if (treeWidget()->sortColumn() == Column::PITCH)
+            return data(Column::PITCH, Qt::UserRole) < other.data(Column::PITCH, Qt::UserRole);
+      else
+            return QTreeWidgetItem::operator<(other);
+      }
 
 //---------------------------------------------------------
 //   EditDrumset
@@ -59,6 +80,8 @@ NoteHead::Group noteHeadNames[] = {
 EditDrumset::EditDrumset(const Drumset* ds, QWidget* parent)
    : QDialog(parent)
       {
+      setObjectName("EditDrumset");
+
       nDrumset = *ds;
       setupUi(this);
       setWindowFlags(this->windowFlags() & ~Qt::WindowContextHelpButtonHint);
@@ -84,6 +107,11 @@ EditDrumset::EditDrumset(const Drumset* ds, QWidget* parent)
       connect(shortcut, SIGNAL(currentIndexChanged(int)), SLOT(shortcutChanged()));
       connect(loadButton, SIGNAL(clicked()), SLOT(load()));
       connect(saveButton, SIGNAL(clicked()), SLOT(save()));
+      pitchList->setColumnWidth(0, 40);
+      pitchList->setColumnWidth(1, 60);
+      pitchList->setColumnWidth(2, 30);
+
+      MuseScore::restoreGeometry(this);
       }
 
 //---------------------------------------------------------
@@ -94,7 +122,7 @@ void EditDrumset::updateList()
       {
       pitchList->clear();
       for (int i = 0; i < 128; ++i) {
-            QTreeWidgetItem* item = new QTreeWidgetItem(pitchList);
+            QTreeWidgetItem* item = new EditDrumsetTreeWidgetItem(pitchList);
             item->setText(Column::PITCH, QString("%1").arg(i));
             item->setText(Column::NOTE, pitch2string(i));
             if (nDrumset.shortcut(i) == 0)
@@ -104,8 +132,9 @@ void EditDrumset::updateList()
                   item->setText(Column::SHORTCUT, s);
                   }
             item->setText(Column::NAME, qApp->translate("drumset", nDrumset.name(i).toUtf8().constData()));
-            item->setData(0, Qt::UserRole, i);
+            item->setData(Column::PITCH, Qt::UserRole, i);
             }
+      pitchList->sortItems(3, Qt::SortOrder::DescendingOrder);
       }
 
 void EditDrumset::updateList2()
@@ -241,7 +270,7 @@ void EditDrumset::itemChanged(QTreeWidgetItem* current, QTreeWidgetItem* previou
       qDebug("AFTER %d", nDrumset.voice(pitch));
       stemDirection->setCurrentIndex(int(nDrumset.stemDirection(pitch)));
       NoteHead::Group nh = nDrumset.noteHead(pitch);
-      noteHead->setCurrentIndex(int(nh) + 1);
+      noteHead->setCurrentIndex(noteHead->findData(int(nh)));
       if (nDrumset.shortcut(pitch) == 0)
             shortcut->setCurrentIndex(7);
       else
@@ -266,7 +295,7 @@ void EditDrumset::valueChanged()
             return;
       int pitch = pitchList->currentItem()->data(Column::PITCH, Qt::UserRole).toInt();
       nDrumset.drum(pitch).name          = name->text();
-      nDrumset.drum(pitch).notehead      = NoteHead::Group(noteHead->currentIndex() - 1);
+      nDrumset.drum(pitch).notehead      = NoteHead::Group(noteHead->currentData().toInt());
       nDrumset.drum(pitch).line          = staffLine->value();
       nDrumset.drum(pitch).voice         = voice->currentIndex();
       nDrumset.drum(pitch).stemDirection = Direction(stemDirection->currentIndex());
@@ -336,7 +365,7 @@ void EditDrumset::load()
       if (!fp.open(QIODevice::ReadOnly))
             return;
 
-      XmlReader e(&fp);
+      XmlReader e(0, &fp);
       nDrumset.clear();
       while (e.readNextStartElement()) {
             if (e.name() == "museScore") {
@@ -370,19 +399,30 @@ void EditDrumset::save()
       if (!f.open(QIODevice::WriteOnly)) {
             QString s = tr("Open File\n%1\nfailed: ")
                + QString(strerror(errno));
-            QMessageBox::critical(mscore, tr("MuseScore: Open File"), s.arg(f.fileName()));
+            QMessageBox::critical(mscore, tr("Open File"), s.arg(f.fileName()));
             return;
             }
       valueChanged();  //save last changes in name
-      Xml xml(&f);
+      XmlWriter xml(0, &f);
       xml.header();
       xml.stag("museScore version=\"" MSC_VERSION "\"");
       nDrumset.save(xml);
       xml.etag();
       if (f.error() != QFile::NoError) {
             QString s = tr("Write File failed: ") + f.errorString();
-            QMessageBox::critical(this, tr("MuseScore: Write Drumset"), s);
+            QMessageBox::critical(this, tr("Write Drumset"), s);
             }
       }
+
+//---------------------------------------------------------
+//   hideEvent
+//---------------------------------------------------------
+
+void EditDrumset::hideEvent(QHideEvent* event)
+      {
+      MuseScore::saveGeometry(this);
+      QDialog::hideEvent(event);
+      }
+
 }
 

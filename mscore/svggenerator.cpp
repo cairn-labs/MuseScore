@@ -41,6 +41,7 @@
 
 #include "svggenerator.h"
 #include "paintengine_p.h"
+#include "libmscore/mscore.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 // FOR GRADIENT FUNCTIONALITY THAT IS NOT IMPLEMENTED (YET):
@@ -137,7 +138,7 @@ static void translate_dashPattern(QVector<qreal> pattern, const qreal& width, QS
 // Gets the contents of the SVG class attribute, based on element type/name
 static QString getClass(const Ms::Element *e)
 {
-    Ms::Element::Type eType;
+    Ms::ElementType eType;
               QString eName;
 
     // Add element type as "class"
@@ -1053,10 +1054,10 @@ bool SvgPaintEngine::begin(QPaintDevice *)
                 " xmlns:xlink=\"http://www.w3.org/1999/xlink\""
                 " version=\"1.2\" baseProfile=\"tiny\">" << endl;
     if (!d->attributes.title.isEmpty()) {
-        stream() << SVG_TITLE_BEGIN << d->attributes.title << SVG_TITLE_END << endl;
+        stream() << SVG_TITLE_BEGIN << d->attributes.title.toHtmlEscaped() << SVG_TITLE_END << endl;
     }
     if (!d->attributes.description.isEmpty()) {
-        stream() << SVG_DESC_BEGIN  << d->attributes.description << SVG_DESC_END << endl;
+        stream() << SVG_DESC_BEGIN  << d->attributes.description.toHtmlEscaped() << SVG_DESC_END << endl;
     }
 
 // <defs> is currently empty. It's necessary for gradients.
@@ -1130,7 +1131,7 @@ void SvgPaintEngine::updateState(const QPaintEngineState &state)
 
     // stateString = Attribute Settings
 
-    // SVG class attribute, based on Ms::Element::Type
+    // SVG class attribute, based on Ms::ElementType
     stateStream << SVG_CLASS << getClass(_element) << SVG_QUOTE;
 
     // Brush and Pen attributes

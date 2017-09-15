@@ -42,6 +42,8 @@
 #include "spacer.h"
 #include "systemdivider.h"
 #include "textframe.h"
+#include "stafflines.h"
+#include "bracketItem.h"
 
 namespace Ms {
 
@@ -92,7 +94,18 @@ void System::clear()
       }
 
 //---------------------------------------------------------
+//   appendMeasure
+//---------------------------------------------------------
+
+void System::appendMeasure(MeasureBase* mb)
+      {
+      mb->setSystem(this);
+      ml.push_back(mb);
+      }
+
+//---------------------------------------------------------
 //   vbox
+//    a system can only contain one vertical frame
 //---------------------------------------------------------
 
 VBox* System::vbox() const
@@ -129,9 +142,8 @@ void System::removeStaff(int idx)
       }
 
 //---------------------------------------------------------
-//   layout
+//   layoutSystem
 ///   Layout the System
-//    xo1 is the indent of this system
 //---------------------------------------------------------
 
 void System::layoutSystem(qreal xo1)
@@ -150,12 +162,16 @@ void System::layoutSystem(qreal xo1)
 
       qreal xoff2 = 0.0;         // x offset for instrument name
 
-      int bracketLevels = 0;
-      for (int idx = 0; idx < nstaves; ++idx)
-            bracketLevels = qMax(bracketLevels, score()->staff(idx)->bracketLevels());
+      int columns = 0;
+      for (int idx = 0; idx < nstaves; ++idx) {
+            int c = 0;
+            for (auto bi : score()->staff(idx)->brackets())
+                  c = qMax(c, bi->column()+1);
+            columns = qMax(columns, c);
+            }
 
-      qreal bracketWidth[bracketLevels];
-      for (int i = 0; i < bracketLevels; ++i)
+      qreal bracketWidth[columns];
+      for (int i = 0; i < columns; ++i)
             bracketWidth[i] = 0.0;
 
       QList<Bracket*> bl;
@@ -163,51 +179,55 @@ void System::layoutSystem(qreal xo1)
 
       for (int staffIdx = 0; staffIdx < nstaves; ++staffIdx) {
             Staff* s = score()->staff(staffIdx);
-            for (int i = 0; i < bracketLevels; ++i) {
-                  if (s->bracket(i) == BracketType::NO_BRACKET)
-                        continue;
-                  int firstStaff = staffIdx;
-                  int lastStaff  = staffIdx + s->bracketSpan(i) - 1;
-                  if (lastStaff >= nstaves)
-                        lastStaff = nstaves - 1;
 
-                  for (; firstStaff <= lastStaff; ++firstStaff) {
-                        if (score()->staff(firstStaff)->show())
-                              break;
-                        }
-                  for (; lastStaff >= firstStaff; --lastStaff) {
-                        if (score()->staff(lastStaff)->show())
-                              break;
-                        }
-                  int span = lastStaff - firstStaff + 1;
-                  //
-                  // do not show bracket if it only spans one
-                  // system due to some invisible staves
-                  //
-                  if ((span > 1) || (s->bracketSpan(i) == span)) {
-                        //
-                        // this bracket is visible
-                        //
-                        Bracket* b = 0;
-                        int track = staffIdx * VOICES;
-                        for (int k = 0; k < bl.size(); ++k) {
-                              if (bl[k]->track() == track && bl[k]->level() == i) {
-                                    b = bl.takeAt(k);
+            for (int i = 0; i < columns; ++i) {
+                  for (auto bi : s->brackets()) {
+                        if (bi->column() != i || bi->bracketType() == BracketType::NO_BRACKET)
+                              continue;
+                        int firstStaff = staffIdx;
+                        int lastStaff  = staffIdx + bi->bracketSpan() - 1;
+                        if (lastStaff >= nstaves)
+                              lastStaff = nstaves - 1;
+
+                        for (; firstStaff <= lastStaff; ++firstStaff) {
+                              if (score()->staff(firstStaff)->show())
                                     break;
+                              }
+                        for (; lastStaff >= firstStaff; --lastStaff) {
+                              if (score()->staff(lastStaff)->show())
+                                    break;
+                              }
+                        int span = lastStaff - firstStaff + 1;
+                        //
+                        // do not show bracket if it only spans one
+                        // system due to some invisible staves
+                        //
+                        if ((span > 1) || (bi->bracketSpan() == span)) {
+                              //
+                              // this bracket is visible
+                              //
+                              Bracket* b = 0;
+                              int track = staffIdx * VOICES;
+                              for (int k = 0; k < bl.size(); ++k) {
+                                    if (bl[k]->track() == track && bl[k]->column() == i && bl[k]->bracketType() == bi->bracketType()) {
+                                          b = bl.takeAt(k);
+                                          break;
+                                          }
                                     }
+                              if (b == 0) {
+                                    b = new Bracket(score());
+                                    b->setBracketItem(bi);
+                                    b->setGenerated(true);
+                                    b->setTrack(track);
+                                    }
+                              add(b);
+                              if (bi->selected() != b->selected()) {
+                                    bi->selected() ? score()->select(b) : score()->deselect(b);
+                                    }
+                              b->setFirstStaff(firstStaff);
+                              b->setLastStaff(lastStaff);
+                              bracketWidth[i] = qMax(bracketWidth[i], b->width());
                               }
-                        if (b == 0) {
-                              b = new Bracket(score());
-                              b->setGenerated(true);
-                              b->setTrack(track);
-                              b->setLevel(i);
-                              }
-                        add(b);
-                        b->setFirstStaff(firstStaff);
-                        b->setLastStaff(lastStaff);
-                        b->setBracketType(s->bracket(i));
-                        b->setSpan(s->bracketSpan(i));
-                        bracketWidth[i] = qMax(bracketWidth[i], b->width());
                         }
                   }
             if (!s->show())
@@ -229,11 +249,10 @@ void System::layoutSystem(qreal xo1)
 
       _leftMargin = xoff2;
 
-
       qreal bd = score()->styleP(StyleIdx::bracketDistance);
-      if ( _brackets.size() > 0) {
-            for (int i = 0; i < bracketLevels; ++i)
-                  _leftMargin += bracketWidth[i] + bd;
+      if (!_brackets.empty()) {
+            for (int w : bracketWidth)
+                  _leftMargin += w + bd;
             }
 
       int nVisible = 0;
@@ -245,12 +264,12 @@ void System::layoutSystem(qreal xo1)
                   continue;
                   }
             ++nVisible;
-            qreal staffMag = staff->mag();
+            qreal staffMag = staff->mag(0);     // ??? TODO
             qreal h;
-            if (staff->lines() == 1)
+            if (staff->lines(0) == 1)
                   h = 2;
             else
-                  h = (staff->lines()-1) * staff->lineDistance();
+                  h = (staff->lines(0)-1) * staff->lineDistance(0);
             h = h * staffMag * spatium();
             s->bbox().setRect(_leftMargin + xo1, 0.0, 0.0, h);
             }
@@ -262,7 +281,7 @@ void System::layoutSystem(qreal xo1)
       for (Bracket* b : _brackets) {
             qreal xo = -xo1;
             for (const Bracket* b2 : _brackets) {
-                   if (b->level() > b2->level() &&
+                   if (b->column() > b2->column() &&
                       ((b->firstStaff() >= b2->firstStaff() && b->firstStaff() <= b2->lastStaff()) ||
                       (b->lastStaff() >= b2->firstStaff() && b->lastStaff() <= b2->lastStaff())))
                         xo += b2->width() + bd;
@@ -279,23 +298,48 @@ void System::layoutSystem(qreal xo1)
             SysStaff* s = staff(idx);
             if (s->show() && p->show()) {
                   for (InstrumentName* t : s->instrumentNames) {
-                        switch (t->textStyle().align() & AlignmentFlags::HMASK) {
-                              case int(AlignmentFlags::LEFT):
+                        switch (int(t->align()) & int(Align::HMASK)) {
+                              case int(Align::LEFT):
                                     t->rxpos() = 0;
                                     break;
-                              case int(AlignmentFlags::HCENTER):
+                              case int(Align::HCENTER):
                                     t->rxpos() = (xoff2 - point(instrumentNameOffset) + xo1) * .5;
                                     break;
-                              case int(AlignmentFlags::RIGHT):
+                              case int(Align::RIGHT):
                               default:
                                     t->rxpos() = xoff2 - point(instrumentNameOffset) + xo1;
                                     break;
                               }
-                        t->rxpos() += t->textStyle().offset(t->spatium()).x();
+//                        t->rxpos() += t->offset(t->spatium()).x();
                         }
                   }
             idx += p->nstaves();
             }
+      }
+
+//---------------------------------------------------------
+//   nextVisibleStaff
+//---------------------------------------------------------
+
+int System::nextVisibleStaff(int staffIdx) const
+      {
+      int i;
+      for (i = staffIdx + 1; i < _staves.size(); ++i) {
+            Staff*    s  = score()->staff(i);
+            SysStaff* ss = _staves[i];
+            if (s->show() && ss->show())
+                  break;
+            }
+      return i;
+      }
+
+//---------------------------------------------------------
+//   firstVisibleStaff
+//---------------------------------------------------------
+
+int System::firstVisibleStaff() const
+      {
+      return nextVisibleStaff(-1);
       }
 
 //---------------------------------------------------------
@@ -316,35 +360,16 @@ void System::layout2()
       setPos(0.0, 0.0);
       QList<std::pair<int,SysStaff*>> visibleStaves;
 
-      int firstStaffIdx        = -1;
-      int lastStaffIdx         = 0;
-      int firstStaffInitialIdx = -1;
-      int lastStaffInitialIdx  = 0;
-      Measure* fm              = firstMeasure();
-
       for (int i = 0; i < _staves.size(); ++i) {
             Staff*    s  = score()->staff(i);
             SysStaff* ss = _staves[i];
             if (s->show() && ss->show()) {
                   visibleStaves.append(std::pair<int,SysStaff*>(i, ss));
-                  if (firstStaffIdx == -1)
-                        firstStaffIdx = i;
-                  if (i > lastStaffIdx)
-                        lastStaffIdx = i;
-                  if (fm && fm->visible(i)) {
-                        if (firstStaffInitialIdx == -1)
-                              firstStaffInitialIdx = i;
-                        lastStaffInitialIdx = i;
-                        }
                   }
             else {
                   ss->setbbox(QRectF());  // already done in layout() ?
                   }
             }
-      if (firstStaffIdx == -1)
-            firstStaffIdx = 0;
-      if (firstStaffInitialIdx == -1)
-            firstStaffInitialIdx = 0;
 
       qreal _spatium            = spatium();
       qreal y                   = 0.0;
@@ -364,15 +389,16 @@ void System::layout2()
 
             qreal h = staff->height();
             if (ni == visibleStaves.end()) {
-                  ss->setYOff(staff->lines() == 1 ? _spatium * staff->mag() : 0.0);
+                  ss->setYOff(staff->lines(0) == 1 ? _spatium * staff->mag(0) : 0.0);
                   ss->bbox().setRect(_leftMargin, y, width() - _leftMargin, h);
                   break;
                   }
 
             int si2    = ni->first;
+            Staff* staff2  = score()->staff(si2);
             qreal dist = h;
 
-            switch (staff->innerBracket()) {
+            switch (staff2->innerBracket()) {
                   case BracketType::BRACE:
                         dist += akkoladeDistance;
                         break;
@@ -383,7 +409,7 @@ void System::layout2()
                         dist += staffDistance;
                         break;
                   }
-            dist += score()->staff(si2)->userDist();
+            dist += staff2->userDist();
 
             for (MeasureBase* mb : ml) {
                   if (!mb->isMeasure())
@@ -395,7 +421,7 @@ void System::layout2()
                   qreal d = s1.minVerticalDistance(s2) + minVerticalDistance;
                   dist    = qMax(dist, d);
 
-                  Spacer* sp = m->mstaff(si1)->_vspacerDown;
+                  Spacer* sp = m->vspacerDown(si1);
                   if (sp) {
                         if (sp->spacerType() == SpacerType::FIXED) {
                               dist = staff->height() + sp->gap();
@@ -404,17 +430,17 @@ void System::layout2()
                         else
                               dist = qMax(dist, staff->height() + sp->gap());
                         }
-                  sp = m->mstaff(si2)->_vspacerUp;
+                  sp = m->vspacerUp(si2);
                   if (sp)
                         dist = qMax(dist, sp->gap());
                   }
 
-            ss->setYOff(staff->lines() == 1 ? _spatium * staff->mag() : 0.0);
+            ss->setYOff(staff->lines(0) == 1 ? _spatium * staff->mag(0) : 0.0);
             ss->bbox().setRect(_leftMargin, y, width() - _leftMargin, h);
             y += dist;
             }
 
-      qreal systemHeight = staff(lastStaffIdx)->bbox().bottom();
+      qreal systemHeight = staff(visibleStaves.back().first)->bbox().bottom();
       setHeight(systemHeight);
 
       for (MeasureBase* m : ml) {
@@ -433,24 +459,6 @@ void System::layout2()
                   }
             else
                   qDebug("unhandled measure type %s", m->name());
-            }
-
-      if (fm) {
-            Segment* s        = fm->first();
-            BarLine* _barLine = s->isBeginBarLineType() ? toBarLine(s->element(0)) : 0;
-
-            if (_barLine) {
-                  _barLine->setTrack(firstStaffInitialIdx * VOICES);
-                  _barLine->setSpan(lastStaffInitialIdx - firstStaffInitialIdx + 1);
-                  if (score()->staff(firstStaffInitialIdx)->lines() == 1)
-                        _barLine->setSpanFrom(BARLINE_SPAN_1LINESTAFF_FROM);
-                  else
-                        _barLine->setSpanFrom(0);
-                  int llines = score()->staff(lastStaffInitialIdx)->lines();
-                  int spanTo = llines == 1 ? BARLINE_SPAN_1LINESTAFF_TO : (llines - 1) * 2;
-                  _barLine->setSpanTo(spanTo);
-                  _barLine->layout();
-                  }
             }
 
       //---------------------------------------------------
@@ -478,8 +486,6 @@ void System::layout2()
                   ey = _staves[staffIdx2]->bbox().bottom();
                   }
             b->rypos() = sy;
-//            if (score()->staff(firstStaffInitialIdx)->lines() == 1)   // bbox of one line staff bad?
-//                  b->rypos() -= _spatium;
             b->setHeight(ey - sy);
             b->layout();
             }
@@ -539,7 +545,8 @@ void System::layout2()
                                     y2 = staff(staffIdx + 2)->bbox().bottom();
                                     break;
                               }
-                        t->rypos() = y1 + (y2 - y1) * .5 + t->textStyle().offset(t->spatium()).y();
+                        // t->rypos() = y1 + (y2 - y1) * .5 + t->offset(t->spatium()).y();
+                        t->rypos() = y1 + (y2 - y1) * .5;
                         }
                   }
             staffIdx += nstaves;
@@ -575,7 +582,7 @@ void System::setInstrumentNames(bool longName)
       for (SysStaff* staff : _staves) {
             Staff* s = score()->staff(staffIdx);
             if (!s->isTop() || !s->show()) {
-                  foreach (InstrumentName* t, staff->instrumentNames)
+                  for (InstrumentName* t : staff->instrumentNames)
                         score()->removeElement(t);
                   ++staffIdx;
                   continue;
@@ -585,7 +592,7 @@ void System::setInstrumentNames(bool longName)
             const QList<StaffName>& names = longName? part->longNames(tick) : part->shortNames(tick);
 
             int idx = 0;
-            foreach (const StaffName& sn, names) {
+            for (const StaffName& sn : names) {
                   InstrumentName* iname = staff->instrumentNames.value(idx);
                   if (iname == 0) {
                         iname = new InstrumentName(score());
@@ -593,10 +600,10 @@ void System::setInstrumentNames(bool longName)
                         iname->setParent(this);
                         iname->setTrack(staffIdx * VOICES);
                         iname->setInstrumentNameType(longName ? InstrumentNameType::LONG : InstrumentNameType::SHORT);
+                        iname->setLayoutPos(sn.pos());
                         score()->addElement(iname);
                         }
                   iname->setXmlText(sn.name());
-                  iname->setLayoutPos(sn.pos());
                   ++idx;
                   }
             for (; idx < staff->instrumentNames.size(); ++idx)
@@ -644,51 +651,53 @@ void System::add(Element* el)
 
       el->setParent(this);
       switch(el->type()) {
-            case Element::Type::INSTRUMENT_NAME:
+            case ElementType::INSTRUMENT_NAME:
 // qDebug("  staffIdx %d, staves %d", el->staffIdx(), _staves.size());
                   _staves[el->staffIdx()]->instrumentNames.append(static_cast<InstrumentName*>(el));
                   break;
 
-            case Element::Type::BEAM:
+            case ElementType::BEAM:
                   score()->addElement(el);
                   break;
 
-            case Element::Type::BRACKET:
-                  {
-                  Bracket* b   = static_cast<Bracket*>(el);
+            case ElementType::BRACKET: {
+                  Bracket* b   = toBracket(el);
+#if 0
                   int staffIdx = b->staffIdx();
-                  int level    = b->level();
-                  if (level == -1) {
-                        level = 0;
+                  int column   = b->column();
+                  if (column == -1) {
+                        column = 0;
                         for (const Bracket* bb : _brackets) {
                               if (staffIdx >= bb->firstStaff() && staffIdx <= bb->lastStaff())
-                                    ++level;
+                                    ++column;
                               }
-                        b->setLevel(level);
-                        b->setSpan(1);
+//                        b->setLevel(column);
+//                        b->setSpan(1);
                         }
-//                  b->staff()->setBracket(level,     b->bracketType());
-//                  b->staff()->setBracketSpan(level, b->span());
+//                  b->staff()->setBracket(column,     b->bracketType());
+//                  b->staff()->setBracketSpan(column, b->span());
+#endif
                   _brackets.append(b);
                   }
                   break;
 
-            case Element::Type::MEASURE:
-            case Element::Type::HBOX:
-            case Element::Type::VBOX:
-            case Element::Type::TBOX:
-            case Element::Type::FBOX:
-                  score()->addElement(static_cast<MeasureBase*>(el));
+            case ElementType::MEASURE:
+            case ElementType::HBOX:
+            case ElementType::VBOX:
+            case ElementType::TBOX:
+            case ElementType::FBOX:
+                  score()->addElement(el);
                   break;
-            case Element::Type::TEXTLINE_SEGMENT:
-            case Element::Type::HAIRPIN_SEGMENT:
-            case Element::Type::OTTAVA_SEGMENT:
-            case Element::Type::TRILL_SEGMENT:
-            case Element::Type::VOLTA_SEGMENT:
-            case Element::Type::SLUR_SEGMENT:
-            case Element::Type::PEDAL_SEGMENT:
-            case Element::Type::LYRICSLINE_SEGMENT:
-            case Element::Type::GLISSANDO_SEGMENT:
+            case ElementType::TEXTLINE_SEGMENT:
+            case ElementType::HAIRPIN_SEGMENT:
+            case ElementType::OTTAVA_SEGMENT:
+            case ElementType::TRILL_SEGMENT:
+            case ElementType::VOLTA_SEGMENT:
+            case ElementType::SLUR_SEGMENT:
+            case ElementType::TIE_SEGMENT:
+            case ElementType::PEDAL_SEGMENT:
+            case ElementType::LYRICSLINE_SEGMENT:
+            case ElementType::GLISSANDO_SEGMENT:
                   {
                   SpannerSegment* ss = static_cast<SpannerSegment*>(el);
 #ifndef NDEBUG
@@ -700,9 +709,9 @@ void System::add(Element* el)
                   }
                   break;
 
-            case Element::Type::SYSTEM_DIVIDER:
+            case ElementType::SYSTEM_DIVIDER:
                   {
-                  SystemDivider* sd = static_cast<SystemDivider*>(el);
+                  SystemDivider* sd = toSystemDivider(el);
                   if (sd->dividerType() == SystemDivider::Type::LEFT)
                         _systemDividerLeft = sd;
                   else
@@ -723,41 +732,42 @@ void System::add(Element* el)
 void System::remove(Element* el)
       {
       switch (el->type()) {
-            case Element::Type::INSTRUMENT_NAME:
+            case ElementType::INSTRUMENT_NAME:
                   _staves[el->staffIdx()]->instrumentNames.removeOne(static_cast<InstrumentName*>(el));
                   break;
-            case Element::Type::BEAM:
+            case ElementType::BEAM:
                   score()->removeElement(el);
                   break;
-            case Element::Type::BRACKET:
+            case ElementType::BRACKET:
                   {
                   Bracket* b = static_cast<Bracket*>(el);
                   if (!_brackets.removeOne(b))
                         qDebug("System::remove: bracket not found");
                   }
                   break;
-            case Element::Type::MEASURE:
-            case Element::Type::HBOX:
-            case Element::Type::VBOX:
-            case Element::Type::TBOX:
-            case Element::Type::FBOX:
+            case ElementType::MEASURE:
+            case ElementType::HBOX:
+            case ElementType::VBOX:
+            case ElementType::TBOX:
+            case ElementType::FBOX:
                   score()->removeElement(el);
                   break;
-            case Element::Type::TEXTLINE_SEGMENT:
-            case Element::Type::HAIRPIN_SEGMENT:
-            case Element::Type::OTTAVA_SEGMENT:
-            case Element::Type::TRILL_SEGMENT:
-            case Element::Type::VOLTA_SEGMENT:
-            case Element::Type::SLUR_SEGMENT:
-            case Element::Type::PEDAL_SEGMENT:
-            case Element::Type::LYRICSLINE_SEGMENT:
-            case Element::Type::GLISSANDO_SEGMENT:
+            case ElementType::TEXTLINE_SEGMENT:
+            case ElementType::HAIRPIN_SEGMENT:
+            case ElementType::OTTAVA_SEGMENT:
+            case ElementType::TRILL_SEGMENT:
+            case ElementType::VOLTA_SEGMENT:
+            case ElementType::SLUR_SEGMENT:
+            case ElementType::TIE_SEGMENT:
+            case ElementType::PEDAL_SEGMENT:
+            case ElementType::LYRICSLINE_SEGMENT:
+            case ElementType::GLISSANDO_SEGMENT:
                   if (!_spannerSegments.removeOne(static_cast<SpannerSegment*>(el))) {
                         qDebug("System::remove: %p(%s) not found, score %p", el, el->name(), score());
                         Q_ASSERT(score() == el->score());
                         }
                   break;
-            case Element::Type::SYSTEM_DIVIDER:
+            case ElementType::SYSTEM_DIVIDER:
                   if (el == _systemDividerLeft)
                         _systemDividerLeft = 0;
                   else {
@@ -887,22 +897,20 @@ void System::scanElements(void* data, void (*func)(void*, Element*), bool all)
                   Element* se = spanner->startElement();
                   Element* ee = spanner->endElement();
                   bool v1 = true;
-                  if (se && (se->type() == Element::Type::CHORD || se->type() == Element::Type::REST)) {
-                        ChordRest* cr = static_cast<ChordRest*>(se);
+                  if (se && se->isChordRest()) {
+                        ChordRest* cr = toChordRest(se);
                         Measure* m    = cr->measure();
-                        MStaff* mstaff = m->mstaff(cr->staffIdx());
-                        v1 = mstaff->visible();
+                        v1            = m->visible(cr->staffIdx());
                         }
                   bool v2 = true;
-                  if (!v1 && ee && (ee->type() == Element::Type::CHORD || ee->type() == Element::Type::REST)) {
-                        ChordRest* cr = static_cast<ChordRest*>(ee);
+                  if (!v1 && ee && ee->isChordRest()) {
+                        ChordRest* cr = toChordRest(ee);
                         Measure* m    = cr->measure();
-                        MStaff* mstaff = m->mstaff(cr->staffIdx());
-                        v2 = mstaff->visible();
+                        v2            = m->visible(cr->staffIdx());
                         }
                   v = v1 || v2; // hide spanner if both chords are hidden
                   }
-            if (all || (score()->staff(staffIdx)->show() && _staves[staffIdx]->show() && v) || (spanner->type() == Element::Type::VOLTA))
+            if (all || (score()->staff(staffIdx)->show() && _staves[staffIdx]->show() && v) || spanner->isVolta())
                   ss->scanElements(data, func, all);
             }
       }
@@ -915,9 +923,7 @@ void System::scanElements(void* data, void (*func)(void*, Element*), bool all)
 qreal System::staffYpage(int staffIdx) const
       {
       if (_staves.size() <= staffIdx || staffIdx < 0) {
-            qDebug("staffY: staves %d: bad staffIdx %d",
-               _staves.size(), staffIdx);
-//            abort();
+            qFatal("staffY: staves %d: bad staffIdx %d", _staves.size(), staffIdx);
             return pagePos().y();
             }
       return _staves[staffIdx]->y() + y();
@@ -937,7 +943,7 @@ qreal System::staffCanvasYpage(int staffIdx) const
 //   write
 //---------------------------------------------------------
 
-void System::write(Xml& xml) const
+void System::write(XmlWriter& xml) const
       {
       xml.stag("System");
       if (_systemDividerLeft && _systemDividerLeft->isUserModified())
@@ -966,10 +972,10 @@ void System::read(XmlReader& e)
       }
 
 //---------------------------------------------------------
-//   nextElement
+//   nextSegmentElement
 //---------------------------------------------------------
 
-Element* System::nextElement()
+Element* System::nextSegmentElement()
       {
       Measure* m = firstMeasure();
       if (m) {
@@ -981,10 +987,10 @@ Element* System::nextElement()
       }
 
 //---------------------------------------------------------
-//   prevElement
+//   prevSegmentElement
 //---------------------------------------------------------
 
-Element* System::prevElement()
+Element* System::prevSegmentElement()
       {
       Segment* seg = firstMeasure()->first();
       Element* re = 0;
@@ -993,7 +999,7 @@ Element* System::prevElement()
             if (!seg)
                   return score()->lastElement();
 
-            if (seg->segmentType() == Segment::Type::EndBarLine)
+            if (seg->segmentType() == SegmentType::EndBarLine)
                   score()->inputState().setTrack((score()->staves().size() - 1) * VOICES); //corection
 
             re = seg->lastElement(score()->staves().size() - 1);
@@ -1012,17 +1018,13 @@ Element* System::prevElement()
 
 qreal System::minDistance(System* s2) const
       {
-//      const qreal systemFrameDistance = score()->styleP(StyleIdx::systemFrameDistance);
-//      const qreal frameSystemDistance = score()->styleP(StyleIdx::frameSystemDistance);
-
       if (vbox() && !s2->vbox())
-//            return qMax(frameSystemDistance, -s2->minTop());
             return qMax(vbox()->bottomGap(), -s2->minTop());
       else if (!vbox() && s2->vbox())
-//            return qMax(systemFrameDistance, -minBottom());
             return qMax(s2->vbox()->topGap(), -minBottom());
       else if (vbox() && s2->vbox())
-            return 0.0;
+//            return 0.0;
+            return s2->vbox()->topGap() + vbox()->bottomGap();
 
       qreal minVerticalDistance = score()->styleP(StyleIdx::minVerticalDistance);
       qreal dist                = score()->styleP(StyleIdx::minSystemDistance);
@@ -1033,8 +1035,7 @@ qreal System::minDistance(System* s2) const
       for (MeasureBase* mb1 : ml) {
             if (mb1->isMeasure()) {
                   Measure* m = toMeasure(mb1);
-                  Q_ASSERT(!m->mstaves().empty());
-                  Spacer* sp = m->mstaves().back()->_vspacerDown;
+                  Spacer* sp = m->vspacerDown(m->score()->nstaves()-1);
                   if (sp) {
                         if (sp->spacerType() == SpacerType::FIXED) {
                               dist = sp->gap();
@@ -1050,8 +1051,7 @@ qreal System::minDistance(System* s2) const
             for (MeasureBase* mb2 : s2->ml) {
                   if (mb2->isMeasure()) {
                         Measure* m = toMeasure(mb2);
-                        Q_ASSERT(!m->mstaves().empty());
-                        Spacer* sp = m->mstaves().front()->_vspacerUp;
+                        Spacer* sp = m->vspacerUp(0);
                         if (sp)
                               dist = qMax(dist, sp->gap());
                         }
@@ -1077,7 +1077,7 @@ qreal System::minDistance(System* s2) const
                         Shape s1 = m1->staffShape(lastStaff).translated(m1->pos());
                         Shape s2 = m2->staffShape(0).translated(m2->pos());
                         qreal d  = s1.minVerticalDistance(s2) + minVerticalDistance;
-                        dist = qMax(dist, d - m1->mstaff(lastStaff)->lines->height());
+                        dist = qMax(dist, d - m1->staffLines(lastStaff)->height());
                         }
                   }
             }
@@ -1126,7 +1126,7 @@ qreal System::minTop() const
       {
       qreal dist = 0.0;
       for (MeasureBase* mb : ml) {
-            if (mb->type() != Element::Type::MEASURE)
+            if (mb->type() != ElementType::MEASURE)
                   continue;
             for (Segment* s = static_cast<Measure*>(mb)->first(); s; s = s->next())
                   dist = qMin(dist, s->staffShape(0).top());
@@ -1144,7 +1144,7 @@ qreal System::minBottom() const
       qreal dist = 0.0;
       int staffIdx = score()->nstaves() - 1;
       for (MeasureBase* mb : ml) {
-            if (mb->type() != Element::Type::MEASURE)
+            if (mb->type() != ElementType::MEASURE)
                   continue;
             for (Segment* s = static_cast<Measure*>(mb)->first(); s; s = s->next())
                   dist = qMax(dist, s->staffShape(staffIdx).bottom());
@@ -1156,14 +1156,17 @@ qreal System::minBottom() const
 //   moveBracket
 //---------------------------------------------------------
 
-void System::moveBracket(int staffIdx, int srcCol, int dstCol)
+void System::moveBracket(int /*staffIdx*/, int /*srcCol*/, int /*dstCol*/)
       {
+      printf("System::moveBracket\n");
+#if 0
       if (vbox())
             return;
       for (Bracket* b : _brackets) {
-            if (b->staffIdx() == staffIdx && b->level() == srcCol)
+            if (b->staffIdx() == staffIdx && b->column() == srcCol)
                   b->setLevel(dstCol);
             }
+#endif
       }
 
 //---------------------------------------------------------
@@ -1172,7 +1175,7 @@ void System::moveBracket(int staffIdx, int srcCol, int dstCol)
 
 bool System::pageBreak() const
       {
-      return  ml.back()->pageBreak();
+      return  ml.empty() ? false : ml.back()->pageBreak();
       }
 
 //---------------------------------------------------------

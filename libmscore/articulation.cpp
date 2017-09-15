@@ -35,7 +35,7 @@ Articulation::Articulation(Score* s)
       setFlags(ElementFlag::MOVABLE | ElementFlag::SELECTABLE);
       _symId         = SymId::noSym;
       _anchor        = ArticulationAnchor::TOP_STAFF;
-      _direction     = Direction_AUTO;
+      _direction     = Direction::AUTO;
       _up            = true;
       _timeStretch   = 1.0;
       _ornamentStyle = MScore::OrnamentStyle::DEFAULT;
@@ -109,8 +109,8 @@ bool Articulation::readProperties(XmlReader& e)
             }
       else if (tag == "anchor")
             _anchor = ArticulationAnchor(e.readInt());
-      else if (tag == "direction")
-            readProperty(e, P_ID::DIRECTION);
+      else if (readProperty(tag, e, P_ID::DIRECTION))
+            ;
       else if ( tag == "ornamentStyle")
             setProperty(P_ID::ORNAMENT_STYLE, Ms::getProperty(P_ID::ORNAMENT_STYLE, e));
       else if ( tag == "play")
@@ -134,7 +134,7 @@ bool Articulation::readProperties(XmlReader& e)
 //   write
 //---------------------------------------------------------
 
-void Articulation::write(Xml& xml) const
+void Articulation::write(XmlWriter& xml) const
       {
       if (!xml.canWrite(this))
             return;
@@ -249,8 +249,8 @@ void Articulation::layout()
 void Articulation::setDirection(Direction d)
       {
       _direction = d;
-//      if (d != Direction_AUTO)
-//            _up = (d == Direction_UP);
+//      if (d != Direction::AUTO)
+//            _up = (d == Direction::UP);
       }
 
 //---------------------------------------------------------
@@ -260,8 +260,8 @@ void Articulation::setDirection(Direction d)
 void Articulation::reset()
       {
 #if 0
-      if (_direction != Direction_AUTO)
-            undoChangeProperty(P_ID::DIRECTION, Direction_AUTO);
+      if (_direction != Direction::AUTO)
+            undoChangeProperty(P_ID::DIRECTION, Direction::AUTO);
       ArticulationAnchor a = score()->style()->articulationAnchor(int(articulationType()));
       if (_anchor != a)
             undoChangeProperty(P_ID::ARTICULATION_ANCHOR, int(a));
@@ -285,7 +285,7 @@ QLineF Articulation::dragAnchor() const
 QVariant Articulation::getProperty(P_ID propertyId) const
       {
       switch (propertyId) {
-            case P_ID::DIRECTION:           return direction();
+            case P_ID::DIRECTION:           return QVariant::fromValue<Direction>(direction());
             case P_ID::ARTICULATION_ANCHOR: return int(anchor());
             case P_ID::TIME_STRETCH:        return timeStretch();
             case P_ID::ORNAMENT_STYLE:      return int(ornamentStyle());
@@ -333,7 +333,7 @@ QVariant Articulation::propertyDefault(P_ID propertyId) const
       {
       switch (propertyId) {
             case P_ID::DIRECTION:
-                  return Direction_AUTO;
+                  return QVariant::fromValue<Direction>(Direction::AUTO);
 
             case P_ID::ARTICULATION_ANCHOR:
                   switch (_symId) {
@@ -373,7 +373,9 @@ QVariant Articulation::propertyDefault(P_ID propertyId) const
                         case SymId::articSoftAccentBelow:
                         case SymId::articSoftAccentStaccatoAbove:
                         case SymId::articSoftAccentStaccatoBelow:
+                        case SymId::articSoftAccentTenutoAbove:
                         case SymId::articSoftAccentTenutoBelow:
+                        case SymId::articSoftAccentTenutoStaccatoAbove:
                         case SymId::articSoftAccentTenutoStaccatoBelow:
 
                         case SymId::guitarFadeIn:
@@ -460,18 +462,18 @@ const char* Articulation::articulationName() const
 //   propertyStyle
 //---------------------------------------------------------
 
-PropertyStyle Articulation::propertyStyle(P_ID id) const
+PropertyFlags Articulation::propertyFlags(P_ID id) const
       {
       switch (id) {
             case P_ID::DIRECTION:
             case P_ID::TIME_STRETCH:
             case P_ID::ARTICULATION_ANCHOR:
-                  return PropertyStyle::NOSTYLE;
+                  return PropertyFlags::NOSTYLE;
 
             default:
                   break;
             }
-      return Element::propertyStyle(id);
+      return Element::propertyFlags(id);
       }
 
 //---------------------------------------------------------

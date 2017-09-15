@@ -6,22 +6,6 @@
     <Division>480</Division>
     <Style>
       <lastSystemFillLimit>0</lastSystemFillLimit>
-      <page-layout>
-        <page-height>1683.36</page-height>
-        <page-width>1190.88</page-width>
-        <page-margins type="even">
-          <left-margin>56.6929</left-margin>
-          <right-margin>56.6929</right-margin>
-          <top-margin>56.6929</top-margin>
-          <bottom-margin>113.386</bottom-margin>
-          </page-margins>
-        <page-margins type="odd">
-          <left-margin>56.6929</left-margin>
-          <right-margin>56.6929</right-margin>
-          <top-margin>56.6929</top-margin>
-          <bottom-margin>113.386</bottom-margin>
-          </page-margins>
-        </page-layout>
       <Spatium>1.76389</Spatium>
       </Style>
     <showInvisible>1</showInvisible>
@@ -39,12 +23,6 @@
     <metaTag name="translator"></metaTag>
     <metaTag name="workNumber"></metaTag>
     <metaTag name="workTitle"></metaTag>
-    <PageList>
-      <Page>
-        <System>
-          </System>
-        </Page>
-      </PageList>
     <Part>
       <Staff id="1">
         <StaffType group="pitched">
@@ -228,7 +206,7 @@
           <name>stdNormal</name>
           </StaffType>
         <bracket type="1" span="2"/>
-        <barLineSpan>2</barLineSpan>
+        <barLineSpan>1</barLineSpan>
         </Staff>
       <Staff id="5">
         <StaffType group="pitched">
@@ -236,7 +214,6 @@
           </StaffType>
         <defaultClef>F</defaultClef>
         <bracket type="-1" span="0"/>
-        <barLineSpan>0</barLineSpan>
         </Staff>
       <trackName>Harpsichord</trackName>
       <Instrument>
@@ -507,7 +484,7 @@
           <stem>1</stem>
           </Drum>
         <Drum pitch="56">
-          <head>triangle</head>
+          <head>triangle-down</head>
           <line>1</line>
           <voice>0</voice>
           <name>Cowbell</name>
@@ -636,7 +613,7 @@
           <name>stdNormal</name>
           </StaffType>
         <bracket type="1" span="2"/>
-        <barLineSpan>2</barLineSpan>
+        <barLineSpan>1</barLineSpan>
         </Staff>
       <Staff id="10">
         <StaffType group="pitched">
@@ -644,7 +621,6 @@
           </StaffType>
         <defaultClef>F</defaultClef>
         <bracket type="-1" span="0"/>
-        <barLineSpan>0</barLineSpan>
         </Staff>
       <trackName>Reed Organ</trackName>
       <Instrument>
@@ -856,7 +832,7 @@
           <name>stdNormal</name>
           </StaffType>
         <bracket type="1" span="2"/>
-        <barLineSpan>2</barLineSpan>
+        <barLineSpan>1</barLineSpan>
         </Staff>
       <Staff id="15">
         <StaffType group="pitched">
@@ -864,7 +840,6 @@
           </StaffType>
         <defaultClef>F</defaultClef>
         <bracket type="-1" span="0"/>
-        <barLineSpan>0</barLineSpan>
         </Staff>
       <trackName>Virginal</trackName>
       <Instrument>
@@ -980,7 +955,7 @@
           <name>stdNormal</name>
           </StaffType>
         <bracket type="1" span="2"/>
-        <barLineSpan>2</barLineSpan>
+        <barLineSpan>1</barLineSpan>
         </Staff>
       <Staff id="18">
         <StaffType group="pitched">
@@ -988,7 +963,6 @@
           </StaffType>
         <defaultClef>F</defaultClef>
         <bracket type="-1" span="0"/>
-        <barLineSpan>0</barLineSpan>
         </Staff>
       <trackName>Harp</trackName>
       <Instrument>
@@ -1133,10 +1107,6 @@
           <durationType>measure</durationType>
           <duration>4/4</duration>
           </Rest>
-        <BarLine>
-          <subtype>end</subtype>
-          <span>1</span>
-          </BarLine>
         </Measure>
       </Staff>
     <Staff id="2">
@@ -1180,10 +1150,6 @@
           <durationType>measure</durationType>
           <duration>4/4</duration>
           </Rest>
-        <BarLine>
-          <subtype>end</subtype>
-          <span>1</span>
-          </BarLine>
         </Measure>
       </Staff>
     <Staff id="3">
@@ -1227,10 +1193,6 @@
           <durationType>measure</durationType>
           <duration>4/4</duration>
           </Rest>
-        <BarLine>
-          <subtype>end</subtype>
-          <span>1</span>
-          </BarLine>
         </Measure>
       </Staff>
     <Staff id="4">
@@ -1271,10 +1233,6 @@
           <durationType>measure</durationType>
           <duration>4/4</duration>
           </Rest>
-        <BarLine>
-          <subtype>end</subtype>
-          <span>2</span>
-          </BarLine>
         </Measure>
       </Staff>
     <Staff id="5">
@@ -1350,10 +1308,6 @@
           <durationType>measure</durationType>
           <duration>4/4</duration>
           </Rest>
-        <BarLine>
-          <subtype>end</subtype>
-          <span>1</span>
-          </BarLine>
         </Measure>
       </Staff>
     <Staff id="7">
@@ -1385,10 +1339,6 @@
           <durationType>measure</durationType>
           <duration>4/4</duration>
           </Rest>
-        <BarLine>
-          <subtype>end</subtype>
-          <span>1</span>
-          </BarLine>
         </Measure>
       </Staff>
     <Staff id="8">
@@ -1420,10 +1370,6 @@
           <durationType>measure</durationType>
           <duration>4/4</duration>
           </Rest>
-        <BarLine>
-          <subtype>end</subtype>
-          <span>1</span>
-          </BarLine>
         </Measure>
       </Staff>
     <Staff id="9">
@@ -1464,10 +1410,6 @@
           <durationType>measure</durationType>
           <duration>4/4</duration>
           </Rest>
-        <BarLine>
-          <subtype>end</subtype>
-          <span>2</span>
-          </BarLine>
         </Measure>
       </Staff>
     <Staff id="10">
@@ -1548,10 +1490,6 @@
           <durationType>measure</durationType>
           <duration>4/4</duration>
           </Rest>
-        <BarLine>
-          <subtype>end</subtype>
-          <span>1</span>
-          </BarLine>
         </Measure>
       </Staff>
     <Staff id="12">
@@ -1592,10 +1530,6 @@
           <durationType>measure</durationType>
           <duration>4/4</duration>
           </Rest>
-        <BarLine>
-          <subtype>end</subtype>
-          <span>1</span>
-          </BarLine>
         </Measure>
       </Staff>
     <Staff id="13">
@@ -1639,10 +1573,6 @@
           <durationType>measure</durationType>
           <duration>4/4</duration>
           </Rest>
-        <BarLine>
-          <subtype>end</subtype>
-          <span>1</span>
-          </BarLine>
         </Measure>
       </Staff>
     <Staff id="14">
@@ -1689,10 +1619,6 @@
           <durationType>measure</durationType>
           <duration>4/4</duration>
           </Rest>
-        <BarLine>
-          <subtype>end</subtype>
-          <span>2</span>
-          </BarLine>
         </Measure>
       </Staff>
     <Staff id="15">
@@ -1767,10 +1693,6 @@
           <durationType>measure</durationType>
           <duration>4/4</duration>
           </Rest>
-        <BarLine>
-          <subtype>end</subtype>
-          <span>1</span>
-          </BarLine>
         </Measure>
       </Staff>
     <Staff id="17">
@@ -1811,10 +1733,6 @@
         <Rest>
           <durationType>half</durationType>
           </Rest>
-        <BarLine>
-          <subtype>end</subtype>
-          <span>2</span>
-          </BarLine>
         </Measure>
       </Staff>
     <Staff id="18">
@@ -1889,10 +1807,6 @@
         <Rest>
           <durationType>half</durationType>
           </Rest>
-        <BarLine>
-          <subtype>end</subtype>
-          <span>1</span>
-          </BarLine>
         </Measure>
       </Staff>
     </Score>

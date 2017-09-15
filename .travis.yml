@@ -32,6 +32,7 @@ matrix:
             - curl
             - libasound2-dev
             - portaudio19-dev
+            - libportmidi-dev
             - libsndfile1-dev
             - zlib1g-dev
             - libfreetype6-dev
@@ -65,6 +66,7 @@ matrix:
           - bsdtar
           - curl
           - zsync
+          - expect
       services:
         - docker
       script:
@@ -78,6 +80,7 @@ matrix:
     #      - bsdtar
     #      - curl
     #      - zsync
+    #      - expect
     #  services:
     #    - docker
     #  script:
@@ -91,6 +94,7 @@ matrix:
     #      - bsdtar
     #      - curl
     #      - zsync
+    #      - expect
     #  services:
     #    - docker
     #  before_script:
@@ -108,7 +112,7 @@ matrix:
       before_install:
         - source build/travis/job_macos/before_install.sh
       install:
-        - "./build/travis/job_macos/install.sh"
+        - source ./build/travis/job_macos/install.sh
       script:
         - "./build/travis/job_macos/script.sh"
 

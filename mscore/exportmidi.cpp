@@ -119,7 +119,7 @@ void ExportMidi::writeHeader()
                   ev.setMetaType(META_TIME_SIGNATURE);
                   ev.setEData(data);
                   ev.setLen(4);
-                  track.insert(is->first + tickOffset, ev);
+                  track.insert(pauseMap.addPauseTicks(is->first + tickOffset), ev);
                   }
             }
 
@@ -133,7 +133,8 @@ void ExportMidi::writeHeader()
             Staff* staff  = cs->staff(staffIdx);
             KeyList* keys = staff->keyList();
 
-            foreach(const RepeatSegment* rs, *cs->repeatList()) {
+            bool initialKeySigFound = false;
+            for (const RepeatSegment* rs : *cs->repeatList()) {
                   int startTick  = rs->tick;
                   int endTick    = startTick + rs->len;
                   int tickOffset = rs->utick - rs->tick;
@@ -141,9 +142,7 @@ void ExportMidi::writeHeader()
                   auto sk = keys->lower_bound(startTick);
                   auto ek = keys->lower_bound(endTick);
 
-                  bool keysigFound = false;
                   for (auto ik = sk; ik != ek; ++ik) {
-                        keysigFound = true;
                         MidiEvent ev;
                         ev.setType(ME_META);
                         Key key       = ik->second.key();   // -7 -- +7
@@ -153,54 +152,53 @@ void ExportMidi::writeHeader()
                         data[0]   = int(key);
                         data[1]   = 0;  // major
                         ev.setEData(data);
-                        track.insert(ik->first + tickOffset, ev);
-                        }
-                  if (!keysigFound) {
-                        MidiEvent ev;
-                        ev.setType(ME_META);
-                        int key = 0;
-                        ev.setMetaType(META_KEY_SIGNATURE);
-                        ev.setLen(2);
-                        unsigned char* data = new unsigned char[2];
-                        data[0]   = key;
-                        data[1]   = 0;  // major
-                        ev.setEData(data);
-                        track.insert(0, ev);
+                        int tick = ik->first + tickOffset;
+                        track.insert(pauseMap.addPauseTicks(tick), ev);
+                        if (tick == 0)
+                              initialKeySigFound = true;
                         }
                   }
+
+            // fall back write a default C keysig if no initial keysig found
+            if (!initialKeySigFound) {
+                  MidiEvent ev;
+                  ev.setType(ME_META);
+                  int key = 0;
+                  ev.setMetaType(META_KEY_SIGNATURE);
+                  ev.setLen(2);
+                  unsigned char* data = new unsigned char[2];
+                  data[0]   = key;
+                  data[1]   = 0;  // major
+                  ev.setEData(data);
+                  track.insert(0, ev);
+                  }
+
             ++staffIdx;
             }
 
       //--------------------------------------------
-      //    write tempo changes
+      //    write tempo changes from PauseMap
+      //     don't need to unwind or add pauses as this was done already
       //--------------------------------------------
 
-      TempoMap* tempomap = cs->tempomap();
-      int relTempo = tempomap->relTempo();
-      foreach(const RepeatSegment* rs, *cs->repeatList()) {
-            int startTick  = rs->tick;
-            int endTick    = startTick + rs->len;
-            int tickOffset = rs->utick - rs->tick;
+      TempoMap* tempomap = pauseMap.tempomapWithPauses;
+      qreal relTempo = tempomap->relTempo();
+      for (auto it = tempomap->cbegin(); it != tempomap->cend(); ++it) {
+            MidiEvent ev;
+            ev.setType(ME_META);
+            //
+            // compute midi tempo: microseconds / quarter note
+            //
+            int tempo = lrint((1.0 / (it->second.tempo * relTempo)) * 1000000.0);
 
-            auto se = tempomap->lower_bound(startTick);
-            auto ee = tempomap->lower_bound(endTick);
-            for (auto it = se; it != ee; ++it) {
-                  MidiEvent ev;
-                  ev.setType(ME_META);
-                  //
-                  // compute midi tempo: microseconds / quarter note
-                  //
-                  int tempo = lrint((1.0 / (it->second.tempo * relTempo)) * 1000000.0);
-
-                  ev.setMetaType(META_TEMPO);
-                  ev.setLen(3);
-                  unsigned char* data = new unsigned char[3];
-                  data[0]   = tempo >> 16;
-                  data[1]   = tempo >> 8;
-                  data[2]   = tempo;
-                  ev.setEData(data);
-                  track.insert(it->first + tickOffset, ev);
-                  }
+            ev.setMetaType(META_TEMPO);
+            ev.setLen(3);
+            unsigned char* data = new unsigned char[3];
+            data[0]   = tempo >> 16;
+            data[1]   = tempo >> 8;
+            data[2]   = tempo;
+            ev.setEData(data);
+            track.insert(it->first, ev);
             }
       }
 
@@ -226,6 +224,7 @@ bool ExportMidi::write(const QString& name, bool midiExpandRepeats)
       cs->updateSwing();
       cs->createPlayEvents();
       cs->updateRepeatList(midiExpandRepeats);
+      pauseMap.calculate(cs);
       writeHeader();
 
       int staffIdx = 0;
@@ -300,15 +299,15 @@ bool ExportMidi::write(const QString& name, bool midiExpandRepeats)
                                     continue;
 
                               if (event.type() == ME_NOTEON) {
-                                    track.insert(i->first, MidiEvent(ME_NOTEON, channel,
+                                    track.insert(pauseMap.addPauseTicks(i->first), MidiEvent(ME_NOTEON, channel,
                                                                      event.pitch(), event.velo()));
                                     }
                               else if (event.type() == ME_CONTROLLER) {
-                                    track.insert(i->first, MidiEvent(ME_CONTROLLER, channel,
+                                    track.insert(pauseMap.addPauseTicks(i->first), MidiEvent(ME_CONTROLLER, channel,
                                                                      event.controller(), event.value()));
                                     }
                               else if(event.type() == ME_PITCHBEND) {
-                                    track.insert(i->first, MidiEvent(ME_PITCHBEND, channel,
+                                    track.insert(pauseMap.addPauseTicks(i->first), MidiEvent(ME_PITCHBEND, channel,
                                                                      event.dataA(), event.dataB()));
                                     }
                               else {
@@ -321,5 +320,63 @@ bool ExportMidi::write(const QString& name, bool midiExpandRepeats)
             }
       return !mf.write(&f);
       }
-}
 
+//---------------------------------------------------------
+//   PauseMap::calculate
+//    MIDI files cannot contain pauses so insert extra ticks and tempo changes instead.
+//    The PauseMap and new TempoMap are fully unwound to account for pauses on repeats.
+//---------------------------------------------------------
+
+void ExportMidi::PauseMap::calculate(const Score* s)
+      {
+      Q_ASSERT(s);
+      TimeSigMap* sigmap = s->sigmap();
+      TempoMap* tempomap = s->tempomap();
+
+      this->insert(std::pair<const int, int> (0, 0)); // can't start with a pause
+
+      tempomapWithPauses = new TempoMap();
+      tempomapWithPauses->setRelTempo(tempomap->relTempo());
+
+      foreach(const RepeatSegment* rs, *s->repeatList()) {
+            int startTick  = rs->tick;
+            int endTick    = startTick + rs->len;
+            int tickOffset = rs->utick - rs->tick;
+
+            auto se = tempomap->lower_bound(startTick);
+            auto ee = tempomap->lower_bound(endTick);
+
+            for (auto it = se; it != ee; ++it) {
+                  int tick = it->first;
+                  int utick = tick + tickOffset;
+
+                  if (it->second.pause == 0.0) {
+                        tempomapWithPauses->insert(std::pair<const int, TEvent> (this->addPauseTicks(utick), it->second));
+                        }
+                  else {
+                        Fraction timeSig(sigmap->timesig(tick).timesig());
+                        qreal quarterNotesPerMeasure = (4.0 * timeSig.numerator()) / timeSig.denominator();
+                        int ticksPerMeasure =  quarterNotesPerMeasure * MScore::division; // store a full measure of ticks to keep barlines in same places
+                        tempomapWithPauses->setTempo(this->addPauseTicks(utick), quarterNotesPerMeasure / it->second.pause); // new tempo for pause
+                        this->insert(std::pair<const int, int> (utick, ticksPerMeasure + this->offsetAtUTick(utick))); // store running total of extra ticks
+                        tempomapWithPauses->setTempo(this->addPauseTicks(utick), it->second.tempo); // restore previous tempo
+                        }
+                  }
+            }
+      }
+
+//---------------------------------------------------------
+//   PauseMap::offsetAtUTick
+//    In total, how many extra ticks have been inserted prior to this utick.
+//---------------------------------------------------------
+
+int ExportMidi::PauseMap::offsetAtUTick(int utick) const
+      {
+      Q_ASSERT(!this->empty()); // make sure calculate was called
+      auto i = upper_bound(utick);
+      if (i != begin())
+            --i;
+      return i->second;
+      }
+
+}

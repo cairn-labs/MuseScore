@@ -46,7 +46,7 @@
 - evaluate the possibility of implementing "Continuous View" as a real "view" change
   without changing the score (no undo/redo change)
 
-- remove pre 2.0 compatibility
+- move compatibility code into separate modules.
 
 
 ====================================================================
@@ -87,6 +87,12 @@ Timewise insert/delete notes/rests
             - adjusting the actual measure lenght in measure properties; this
               can be achieved by inserting/deleting notes/rests in the measure.
             - delete measure timewise: replaced by Ctrl+Del of selection ranges
+
+
+Palette handling
+-------------------------------
+      - shift+drag allows to move a palette element in the palette
+      - ctrl+drag is drag operation with special semantic
 
 
 ====================================================================
@@ -141,26 +147,8 @@ Timewise insert/delete notes/rests
                   ...
 
       * enums
-        Some scoped enums can be replaced by classes. Example:
-
-            class Direction {
-                  ...
-               public:
-                  enum _Direction { AUTO, UP, DOWN };
-                  ...
-                  };
-
-        Goal is to allow
-            - allow type conversion (to QVariant for example)
-            - add conversion to/from string for use in Xml::read(...)/Xml::write(xxx)
-            - export to qml scripting
-
-        Drawbacks:
-            - forward declaration is not possible as for c++11 "enum class"
-            - the enum _Direction is a different type than Direction; which sometimes
-              require a static_cast
-
-        This is somehow experimental.
+            To export enums for scripting we collect them in types.h and use the new
+            qt feature Q_NAMESPACE.
 
       * debug messages
             - use qWarning(), qCritical() and qFatal()
@@ -175,7 +163,7 @@ Timewise insert/delete notes/rests
       some rules
 ====================================================================
 
-      Layout
+Layout
 
       - After loading a score, the score data can only be modified in a "undo" function during editing.
         The score is "dirty" if there is an undo stack entry.
@@ -183,13 +171,18 @@ Timewise insert/delete notes/rests
       - Flags/data which describe what kind of relayout/update the score needs are collected in
         Score->CmdState. They can only be set in an "undo" function.
 
-      Score File
+Score File
 
       - "created" elements are not written out into the score file. For example bar lines are usually created
         by layout. They are marked as created and therefore do not appear in the score file.
 
       - Element properties are only written if they differ from their default value which usually is the
         style value if they are styled.
+
+paint() method in Element
+      paint() should never paint something or not conditionally. If you watn something not to be
+      painted, then set the bounding box of the element to zero in layout() and paint will not
+      be called. This works better with smart layout and collision detection.
 
 ====================================================================
       Implementation Details
@@ -231,6 +224,23 @@ BarLine handling
             - EndBarLine
                   - is created automatically
                   - maybe not the last Segment in a Measure (cautionary elements can follow)
+
+
+Ottava
+      Ottavas have no placement style. Placement depends on the ottava subtype and is hardcoded.
+
+Dynamics
+      Default vertical reference position for Placement "below" (dynamicPosBelow = 0.0) is the last
+      staff line + text line height.
+
+
+Styles & Properties
+      There is a connection between style values and property values as some properties
+      can be styled. The StyleIdx of a property style can be found by calling
+            StyleIdx Element::getPropertyStyle(P_ID)
+      If the property has no style, then StyleIDx::NOSTYLE is returned.
+
+      A property can have different style values depending on the element type.
 
 
 

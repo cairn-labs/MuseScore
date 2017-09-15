@@ -53,8 +53,6 @@ bool useALSA = false, useJACK = false, usePortaudio = false, usePulseAudio = fal
 
 extern bool externalStyle;
 
-static int exportAudioSampleRates[2] = { 44100, 48000 };
-
 //---------------------------------------------------------
 //   Preferences
 //---------------------------------------------------------
@@ -116,12 +114,16 @@ void Preferences::init()
 
       rememberLastConnections = true;
 
-      alsaDevice         = "default";
-      alsaSampleRate     = 48000;
-      alsaPeriodSize     = 1024;
-      alsaFragments      = 3;
-      portaudioDevice    = -1;
-      portMidiInput      = "";
+      alsaDevice                = "default";
+      alsaSampleRate            = 48000;
+      alsaPeriodSize            = 1024;
+      alsaFragments             = 3;
+      portaudioDevice           = -1;
+      portMidiInput             = "";
+      portMidiInputBufferCount  = 100;
+      portMidiOutput            = "";
+      portMidiOutputBufferCount = 65536;
+      portMidiOutputLatencyMilliseconds = 0;
 
       antialiasedDrawing       = true;
       sessionStart             = SessionStart::SCORE;
@@ -156,7 +158,7 @@ void Preferences::init()
       mag                     = 1.0;
       showMidiControls        = false;
 
-#if defined(Q_OS_MAC) || defined(Q_OS_WIN)
+#if defined(Q_OS_MAC) || (defined(Q_OS_WIN) && !defined(FOR_WINSTORE))
       checkUpdateStartup      = true;
 #else
       checkUpdateStartup      = false;
@@ -187,6 +189,7 @@ void Preferences::init()
       myTemplatesPath = QFileInfo(QString("%1/%2").arg(wd).arg(QCoreApplication::translate("templates_directory",  "Templates"))).absoluteFilePath();
       myPluginsPath   = QFileInfo(QString("%1/%2").arg(wd).arg(QCoreApplication::translate("plugins_directory",    "Plugins"))).absoluteFilePath();
       mySoundfontsPath = QFileInfo(QString("%1/%2").arg(wd).arg(QCoreApplication::translate("soundfonts_directory", "Soundfonts"))).absoluteFilePath();
+      myShortcutPath = QFileInfo(QString("%1/%2").arg(wd).arg(QCoreApplication::translate("shortcuts_directory", "Shortcuts"))).absoluteFilePath();
 
       MScore::setNudgeStep(.1);         // cursor key (default 0.1)
       MScore::setNudgeStep10(1.0);      // Ctrl + cursor key (default 1.0)
@@ -201,7 +204,8 @@ void Preferences::init()
 #else
       nativeDialogs           = false;    // don't use system native file dialogs
 #endif
-      exportAudioSampleRate   = exportAudioSampleRates[0];
+      exportAudioSampleRate   = 44100;
+      exportMp3BitRate        = 128;
 
       workspace               = "Basic";
       exportPdfDpi            = 300;
@@ -258,7 +262,9 @@ void Preferences::write()
       s.setValue("alsaPeriodSize",     alsaPeriodSize);
       s.setValue("alsaFragments",      alsaFragments);
       s.setValue("portaudioDevice",    portaudioDevice);
-      s.setValue("portMidiInput",   portMidiInput);
+      s.setValue("portMidiInput",      portMidiInput);
+      s.setValue("portMidiOutput",     portMidiOutput);
+      s.setValue("portMidiOutputLatencyMilliseconds", portMidiOutputLatencyMilliseconds);
 
       s.setValue("layoutBreakColor",   MScore::layoutBreakColor.name(QColor::NameFormat::HexArgb));
       s.setValue("frameMarginColor",   MScore::frameMarginColor.name(QColor::NameFormat::HexArgb));
@@ -296,11 +302,11 @@ void Preferences::write()
       s.setValue("pngTransparent",     pngTransparent);
       s.setValue("language",           language);
 
-      s.setValue("paperWidth",  MScore::defaultStyle()->pageFormat()->width());
-      s.setValue("paperHeight", MScore::defaultStyle()->pageFormat()->height());
+      s.setValue("paperWidth",  MScore::defaultStyle().value(StyleIdx::pageWidth).toReal());
+      s.setValue("paperHeight", MScore::defaultStyle().value(StyleIdx::pageHeight).toReal());
 
-      s.setValue("twosided",    MScore::defaultStyle()->pageFormat()->twosided());
-      s.setValue("spatium",     MScore::defaultStyle()->value(StyleIdx::spatium).toDouble() / DPI);
+      s.setValue("twosided",    MScore::defaultStyle().value(StyleIdx::pageTwosided).toBool());
+      s.setValue("spatium",     MScore::defaultStyle().value(StyleIdx::spatium).toDouble() / DPI);
 
       s.setValue("mag", mag);
       s.setValue("showMidiControls", showMidiControls);
@@ -332,11 +338,13 @@ void Preferences::write()
       s.setValue("myTemplatesPath", myTemplatesPath);
       s.setValue("myPluginsPath", myPluginsPath);
       s.setValue("mySoundfontsPath", mySoundfontsPath);
+      s.setValue("myShortcutPath", myShortcutPath);
 
       s.setValue("hraster", MScore::hRaster());
       s.setValue("vraster", MScore::vRaster());
       s.setValue("nativeDialogs", nativeDialogs);
       s.setValue("exportAudioSampleRate", exportAudioSampleRate);
+      s.setValue("exportMp3BitRate", exportMp3BitRate);
 
       s.setValue("workspace", workspace);
       s.setValue("exportPdfDpi", exportPdfDpi);
@@ -432,6 +440,8 @@ void Preferences::read()
       alsaFragments      = s.value("alsaFragments", alsaFragments).toInt();
       portaudioDevice    = s.value("portaudioDevice", portaudioDevice).toInt();
       portMidiInput      = s.value("portMidiInput", portMidiInput).toString();
+      portMidiOutput     = s.value("portMidiOutput", portMidiOutput).toString();
+      portMidiOutputLatencyMilliseconds = s.value("portMidiOutputLatencyMilliseconds", portMidiOutputLatencyMilliseconds).toInt();
       MScore::layoutBreakColor   = readColor("layoutBreakColor", MScore::layoutBreakColor);
       MScore::frameMarginColor   = readColor("frameMarginColor", MScore::frameMarginColor);
       antialiasedDrawing      = s.value("antialiasedDrawing", antialiasedDrawing).toBool();
@@ -493,6 +503,7 @@ void Preferences::read()
       myTemplatesPath  = s.value("myTemplatesPath",  myTemplatesPath).toString();
       myPluginsPath    = s.value("myPluginsPath",    myPluginsPath).toString();
       mySoundfontsPath = s.value("mySoundfontsPath", mySoundfontsPath).toString();
+      myShortcutPath   = s.value("myShortcutPath",   myShortcutPath).toString();
 
       //Create directories if they are missing
       QDir dir;
@@ -509,6 +520,7 @@ void Preferences::read()
 
       nativeDialogs    = s.value("nativeDialogs", nativeDialogs).toBool();
       exportAudioSampleRate = s.value("exportAudioSampleRate", exportAudioSampleRate).toInt();
+      exportMp3BitRate   = s.value("exportMp3Bitrate", exportMp3BitRate).toInt();
 
       workspace          = s.value("workspace", workspace).toString();
       exportPdfDpi       = s.value("exportPdfDpi", exportPdfDpi).toInt();
@@ -589,7 +601,54 @@ PreferenceDialog::PreferenceDialog(QWidget* parent)
 #endif
 #ifndef USE_ALSA
       alsaDriver->setVisible(false);
+      alsaDriver->setChecked(false);
+#else
+      alsaSampleRate->clear();
+      alsaSampleRate->addItem(tr("192000"), 192000);
+      alsaSampleRate->addItem( tr("96000"),  96000);
+      alsaSampleRate->addItem( tr("88200"),  88200);
+      alsaSampleRate->addItem( tr("48000"),  48000); // default
+      alsaSampleRate->addItem( tr("44100"),  44100);
+      alsaSampleRate->addItem( tr("32000"),  32000);
+      alsaSampleRate->addItem( tr("22050"),  22050);
+
+      alsaPeriodSize->clear();
+      alsaPeriodSize->addItem(tr("4096"), 4096);
+      alsaPeriodSize->addItem(tr("2048"), 2048);
+      alsaPeriodSize->addItem(tr("1024"), 1024); // default
+      alsaPeriodSize->addItem( tr("512"),  512);
+      alsaPeriodSize->addItem( tr("256"),  256);
+      alsaPeriodSize->addItem( tr("128"),  128);
+      alsaPeriodSize->addItem(  tr("64"),   64);
 #endif
+
+      exportAudioSampleRate->clear();
+      exportAudioSampleRate->addItem(tr("32000"), 32000);
+      exportAudioSampleRate->addItem(tr("44100"), 44100); // default
+      exportAudioSampleRate->addItem(tr("48000"), 48000);
+
+#ifndef USE_LAME
+      exportMp3BitRateLabel->setVisible(false);
+      exportMp3BitRate->setVisible(false);
+      exportMp3BitRateUnit->setVisible(false);
+#else
+      exportMp3BitRate->clear();
+      exportMp3BitRate->addItem( tr("32"),  32);
+      exportMp3BitRate->addItem( tr("40"),  40);
+      exportMp3BitRate->addItem( tr("48"),  48);
+      exportMp3BitRate->addItem( tr("56"),  56);
+      exportMp3BitRate->addItem( tr("64"),  64);
+      exportMp3BitRate->addItem( tr("80"),  80);
+      exportMp3BitRate->addItem( tr("96"),  96);
+      exportMp3BitRate->addItem(tr("112"), 112);
+      exportMp3BitRate->addItem(tr("128"), 128); // default
+      exportMp3BitRate->addItem(tr("160"), 160);
+      exportMp3BitRate->addItem(tr("192"), 192);
+      exportMp3BitRate->addItem(tr("224"), 224);
+      exportMp3BitRate->addItem(tr("256"), 256);
+      exportMp3BitRate->addItem(tr("320"), 320);
+#endif
+
 #ifndef USE_PORTAUDIO
       portaudioDriver->setVisible(false);
 #endif
@@ -637,6 +696,8 @@ PreferenceDialog::PreferenceDialog(QWidget* parent)
 
       connect(shortcutList,   SIGNAL(itemActivated(QTreeWidgetItem*, int)), SLOT(defineShortcutClicked()));
       connect(resetShortcut,  SIGNAL(clicked()), SLOT(resetShortcutClicked()));
+      connect(saveShortcutList,  SIGNAL(clicked()), SLOT(saveShortcutListClicked()));
+      connect(loadShortcutList,  SIGNAL(clicked()), SLOT(loadShortcutListClicked()));
       connect(clearShortcut,  SIGNAL(clicked()), SLOT(clearShortcutClicked()));
       connect(defineShortcut, SIGNAL(clicked()), SLOT(defineShortcutClicked()));
       connect(resetToDefault, SIGNAL(clicked()), SLOT(resetAllValues()));
@@ -664,11 +725,6 @@ PreferenceDialog::PreferenceDialog(QWidget* parent)
       recordButtons->addButton(recordEditMode, RMIDI_NOTE_EDIT_MODE);
       recordButtons->addButton(recordRealtimeAdvance, RMIDI_REALTIME_ADVANCE);
 
-      int n = sizeof(exportAudioSampleRates)/sizeof(*exportAudioSampleRates);
-      exportAudioSampleRate->clear();
-      for (int idx = 0; idx < n; ++idx)
-            exportAudioSampleRate->addItem(QString("%1").arg(exportAudioSampleRates[idx]));
-
       connect(recordButtons,          SIGNAL(buttonClicked(int)), SLOT(recordButtonClicked(int)));
       connect(midiRemoteControlClear, SIGNAL(clicked()), SLOT(midiRemoteControlClearClicked()));
       connect(portaudioDriver, SIGNAL(toggled(bool)), SLOT(exclusiveAudioDriver(bool)));
@@ -680,8 +736,8 @@ PreferenceDialog::PreferenceDialog(QWidget* parent)
       updateRemote();
 
       MuseScore::restoreGeometry(this);
-#if !defined(Q_OS_MAC) && !defined(Q_OS_WIN)
-      General->removeTab(General->indexOf(tabUpdate)); // updateTab not needed on Linux
+#if !defined(Q_OS_MAC) && (!defined(Q_OS_WIN) || defined(FOR_WINSTORE))
+      General->removeTab(General->indexOf(tabUpdate)); // updateTab not needed on Linux and not wanted in Windows Store
 #endif
       }
 
@@ -832,9 +888,10 @@ void PreferenceDialog::updateValues()
 
       alsaDevice->setText(prefs.alsaDevice);
 
-      int index = alsaSampleRate->findText(QString("%1").arg(prefs.alsaSampleRate));
+      int index = alsaSampleRate->findData(prefs.alsaSampleRate);
       alsaSampleRate->setCurrentIndex(index);
-      index = alsaPeriodSize->findText(QString("%1").arg(prefs.alsaPeriodSize));
+
+      index = alsaPeriodSize->findData(prefs.alsaPeriodSize);
       alsaPeriodSize->setCurrentIndex(index);
 
       alsaFragments->setValue(prefs.alsaFragments);
@@ -909,7 +966,7 @@ void PreferenceDialog::updateValues()
                   connect(portaudioApi, SIGNAL(activated(int)), SLOT(portaudioApiActivated(int)));
 #ifdef USE_PORTMIDI
                   PortMidiDriver* midiDriver = static_cast<PortMidiDriver*>(audio->mididriver());
-                  if(midiDriver){
+                  if (midiDriver) {
                         QStringList midiInputs = midiDriver->deviceInList();
                         int curMidiInIdx = 0;
                         portMidiInput->clear();
@@ -919,6 +976,19 @@ void PreferenceDialog::updateValues()
                                     curMidiInIdx = i;
                               }
                         portMidiInput->setCurrentIndex(curMidiInIdx);
+
+                        QStringList midiOutputs = midiDriver->deviceOutList();
+                        int curMidiOutIdx = -1; // do not set a midi out device if user never selected one
+                        portMidiOutput->clear();
+                        portMidiOutput->addItem("", -1);
+                        for(int i = 0; i < midiOutputs.size(); ++i) {
+                              portMidiOutput->addItem(midiOutputs.at(i), i);
+                              if (midiOutputs.at(i) == prefs.portMidiOutput)
+                                    curMidiOutIdx = i + 1;
+                              }
+                        portMidiOutput->setCurrentIndex(curMidiOutIdx);
+
+                        portMidiOutputLatencyMilliseconds->setValue(prefs.portMidiOutputLatencyMilliseconds);
                         }
 #endif
                   }
@@ -932,7 +1002,7 @@ void PreferenceDialog::updateValues()
       //
       // score settings
       //
-      scale->setValue(prefs.mag*100.0);
+      scale->setValue(prefs.mag * 100.0);
       showMidiControls->setChecked(prefs.showMidiControls);
 
       defaultPlayDuration->setValue(MScore::defaultPlayDuration);
@@ -995,15 +1065,12 @@ void PreferenceDialog::updateValues()
       myPlugins->setText(prefs.myPluginsPath);
       mySoundfonts->setText(prefs.mySoundfontsPath);
 
-      idx = 0;
-      int n = sizeof(exportAudioSampleRates)/sizeof(*exportAudioSampleRates);
-      for (;idx < n; ++idx) {
-            if (exportAudioSampleRates[idx] == prefs.exportAudioSampleRate)
-                  break;
-            }
-      if (idx == n)     // if not found in table
-            idx = 0;
-      exportAudioSampleRate->setCurrentIndex(idx);
+      index = exportAudioSampleRate->findData(prefs.exportAudioSampleRate);
+      exportAudioSampleRate->setCurrentIndex(index);
+
+      index = exportMp3BitRate->findData(prefs.exportMp3BitRate);
+      exportMp3BitRate->setCurrentIndex(index);
+
       exportPdfDpi->setValue(prefs.exportPdfDpi);
       pageVertical->setChecked(MScore::verticalOrientation());
       }
@@ -1086,6 +1153,22 @@ void PreferenceDialog::resetShortcutClicked()
 
       active->setText(1, shortcut->keysToString());
       shortcutsChanged = true;
+      }
+
+void PreferenceDialog::saveShortcutListClicked()
+      {
+      QString saveFileName = QFileDialog::getSaveFileName(this, tr("Save Shortcuts"), prefs.myShortcutPath + "/shortcuts.xml", tr("MuseScore Shortcuts File") + " (*.xml)", 0, preferences.nativeDialogs ? QFileDialog::Options() : QFileDialog::DontUseNativeDialog);
+      prefs.myShortcutPath = saveFileName;
+      Shortcut::saveToNewFile(saveFileName);
+      }
+
+void PreferenceDialog::loadShortcutListClicked()
+      {
+      QString loadFileName = QFileDialog::getOpenFileName(this, tr("Load Shortcuts"), prefs.myShortcutPath, tr("MuseScore Shortcuts File") +  " (*.xml)", 0, preferences.nativeDialogs ? QFileDialog::Options() : QFileDialog::DontUseNativeDialog);
+      if (!loadFileName.isNull()) {
+            prefs.myShortcutPath = loadFileName;
+            Shortcut::loadFromNewFile(loadFileName);
+            }
       }
 
 //---------------------------------------------------------
@@ -1269,6 +1352,8 @@ void PreferenceDialog::buttonBoxClicked(QAbstractButton* button)
                   break;
             case QDialogButtonBox::Ok:
                   apply();
+                  // intentional ??
+                  // fall through
             case QDialogButtonBox::Cancel:
             default:
                   hide();
@@ -1338,14 +1423,15 @@ void PreferenceDialog::apply()
                   }
             }
       else if (
-         (prefs.useAlsaAudio != alsaDriver->isChecked())
-         || (wasJack != nowJack)
+         (wasJack != nowJack)
          || (prefs.usePortaudioAudio != portaudioDriver->isChecked())
          || (prefs.usePulseAudio != pulseaudioDriver->isChecked())
+#ifdef USE_ALSA
          || (prefs.alsaDevice != alsaDevice->text())
-         || (prefs.alsaSampleRate != alsaSampleRate->currentText().toInt())
-         || (prefs.alsaPeriodSize != alsaPeriodSize->currentText().toInt())
+         || (prefs.alsaSampleRate != alsaSampleRate->currentData().toInt())
+         || (prefs.alsaPeriodSize != alsaPeriodSize->currentData().toInt())
          || (prefs.alsaFragments != alsaFragments->value())
+#endif
             ) {
             if (seq)
                   seq->exit();
@@ -1353,8 +1439,8 @@ void PreferenceDialog::apply()
             prefs.usePortaudioAudio  = portaudioDriver->isChecked();
             prefs.usePulseAudio      = pulseaudioDriver->isChecked();
             prefs.alsaDevice         = alsaDevice->text();
-            prefs.alsaSampleRate     = alsaSampleRate->currentText().toInt();
-            prefs.alsaPeriodSize     = alsaPeriodSize->currentText().toInt();
+            prefs.alsaSampleRate     = alsaSampleRate->currentData().toInt();
+            prefs.alsaPeriodSize     = alsaPeriodSize->currentData().toInt();
             prefs.alsaFragments      = alsaFragments->value();
             preferences = prefs;
             if (seq) {
@@ -1382,6 +1468,15 @@ void PreferenceDialog::apply()
 
 #ifdef USE_PORTMIDI
       prefs.portMidiInput = portMidiInput->currentText();
+      prefs.portMidiOutput = portMidiOutput->currentText();
+      if (seq->driver() && static_cast<PortMidiDriver*>(static_cast<Portaudio*>(seq->driver())->mididriver())->isSameCoreMidiIacBus(prefs.portMidiInput, prefs.portMidiOutput)) {
+            QMessageBox msgBox;
+            msgBox.setWindowTitle(tr("Possible MIDI Loopback"));
+            msgBox.setIcon(QMessageBox::Warning);
+            msgBox.setText(tr("Warning: You used the same CoreMIDI IAC bus for input and output.  This will cause problematic loopback, whereby MuseScore's outputted MIDI messages will be sent back to MuseScore as input, causing confusion.  To avoid this problem, access Audio MIDI Setup via Spotlight to create a dedicated virtual port for MuseScore's MIDI output, restart MuseScore, return to Preferences, and select your new virtual port for MuseScore's MIDI output.  Other programs may then use that dedicated virtual port to receive MuseScore's MIDI output."));
+            msgBox.exec();
+            }
+      prefs.portMidiOutputLatencyMilliseconds = portMidiOutputLatencyMilliseconds->value();
 #endif
 
       if (lastSession->isChecked())
@@ -1400,8 +1495,8 @@ void PreferenceDialog::apply()
       prefs.myPluginsPath      = myPlugins->text();
       prefs.mySoundfontsPath = mySoundfonts->text();
 
-      int idx = exportAudioSampleRate->currentIndex();
-      prefs.exportAudioSampleRate = exportAudioSampleRates[idx];
+      prefs.exportAudioSampleRate = exportAudioSampleRate->currentData().toInt();
+      prefs.exportMp3BitRate   = exportMp3BitRate->currentData().toInt();
 
       prefs.midiExpandRepeats  = expandRepeats->isChecked();
       prefs.midiExportRPNs     = exportRPNs->isChecked();
@@ -1519,13 +1614,13 @@ bool Preferences::readDefaultStyle()
       {
       if (defaultStyleFile.isEmpty())
             return false;
-      MStyle* style = new MStyle(*MScore::defaultStyle());
+      MStyle style = MScore::defaultStyle();
       QFile f(defaultStyleFile);
       if (!f.open(QIODevice::ReadOnly))
             return false;
-      bool rv = style->load(&f);
+      bool rv = style.load(&f);
       if (rv)
-            MScore::setDefaultStyle(style);     // transfer ownership
+            MScore::setDefaultStyle(style);
       f.close();
       return rv;
       }
@@ -1772,7 +1867,7 @@ bool Preferences::readPluginList()
             qDebug("Cannot open plugins file <%s>", qPrintable(f.fileName()));
             return false;
             }
-      XmlReader e(&f);
+      XmlReader e(0, &f);
       while (e.readNextStartElement()) {
             if (e.name() == "museScore") {
                   while (e.readNextStartElement()) {
@@ -1823,7 +1918,7 @@ void Preferences::writePluginList()
             qDebug("cannot create plugin file <%s>", qPrintable(f.fileName()));
             return;
             }
-      Xml xml(&f);
+      XmlWriter xml(0, &f);
       xml.header();
       xml.stag("museScore version=\"" MSC_VERSION "\"");
       foreach(const PluginDescription& d, pluginList) {
@@ -1910,10 +2005,12 @@ void Preferences::updatePluginList()
 
 void PreferenceDialog::printShortcutsClicked()
       {
+#ifndef QT_NO_PRINTER
       QPrinter printer(QPrinter::HighResolution);
-      MStyle* s = MScore::defaultStyle();
-      const PageFormat* pf = s->pageFormat();
-      printer.setPaperSize(pf->size(), QPrinter::Inch);
+      const MStyle& s = MScore::defaultStyle();
+      qreal pageW = s.value(StyleIdx::pageWidth).toReal();
+      qreal pageH = s.value(StyleIdx::pageHeight).toReal();
+      printer.setPaperSize(QSizeF(pageW, pageH), QPrinter::Inch);
 
       printer.setCreator("MuseScore Version: " VERSION);
       printer.setFullPage(true);
@@ -1971,5 +2068,6 @@ void PreferenceDialog::printShortcutsClicked()
             item = shortcutList->itemBelow(item);
             }
       p.end();
+#endif
       }
 }

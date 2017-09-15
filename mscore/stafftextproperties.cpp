@@ -23,7 +23,9 @@
 #include "libmscore/stafftext.h"
 #include "libmscore/system.h"
 #include "libmscore/staff.h"
+#include "libmscore/segment.h"
 #include "globals.h"
+#include "musescore.h"
 
 namespace Ms {
 
@@ -51,15 +53,16 @@ static void initChannelCombo(QComboBox* cb, StaffText* st)
 StaffTextProperties::StaffTextProperties(const StaffText* st, QWidget* parent)
    : QDialog(parent)
       {
+      setObjectName("StaffTextProperties");
       setupUi(this);
       if (st->systemFlag()) {
-            setWindowTitle(tr("MuseScore: System Text Properties"));
+            setWindowTitle(tr("System Text Properties"));
             tabWidget->removeTab(tabWidget->indexOf(tabAeolusStops)); // Aeolus settings  for staff text only
             //if (!enableExperimental) tabWidget->removeTab(tabWidget->indexOf(tabMIDIAction));
             tabWidget->removeTab(tabWidget->indexOf(tabChangeChannel)); // Channel switching  for staff text only
             }
       else {
-            setWindowTitle(tr("MuseScore: Staff Text Properties"));
+            setWindowTitle(tr("Staff Text Properties"));
             //tabWidget->removeTab(tabWidget->indexOf(tabSwingSettings)); // Swing settings for system text only, could be disabled here, if desired
 #ifndef AEOLUS
             tabWidget->removeTab(tabWidget->indexOf(tabAeolusStops));
@@ -254,6 +257,8 @@ StaffTextProperties::StaffTextProperties(const StaffText* st, QWidget* parent)
 
       curTabIndex = tabWidget->currentIndex();
       connect(tabWidget, SIGNAL(currentChanged(int)), SLOT(tabChanged(int)));
+
+      MuseScore::restoreGeometry(this);
       }
 
 //---------------------------------------------------------
@@ -461,5 +466,16 @@ void StaffTextProperties::saveValues()
                   }
             }
       }
+
+//---------------------------------------------------------
+//   hideEvent
+//---------------------------------------------------------
+
+void StaffTextProperties::hideEvent(QHideEvent* event)
+      {
+      MuseScore::saveGeometry(this);
+      QWidget::hideEvent(event);
+      }
+
 }
 

@@ -45,11 +45,13 @@ install(FILES
       mscore_fo.qm
       mscore_fr.qm
       mscore_ga.qm
+      mscore_gd.qm
       mscore_gl.qm
       mscore_he.qm
       mscore_hi_IN.qm
       mscore_hr.qm
       mscore_hu.qm
+      mscore_hy.qm
       mscore_id.qm
       mscore_it.qm
       mscore_ja.qm
@@ -57,6 +59,7 @@ install(FILES
       mscore_ko.qm
       mscore_lt.qm
       mscore_lv.qm
+      mscore_ml.qm
       mscore_mn_MN.qm
       mscore_nl.qm
       mscore_nb.qm
@@ -139,11 +142,13 @@ install(FILES
       instruments_fo.qm
       instruments_fr.qm
       instruments_ga.qm
+      instruments_gd.qm
       instruments_gl.qm
       instruments_he.qm
       instruments_hi_IN.qm
       instruments_hr.qm
       instruments_hu.qm
+      instruments_hy.qm
       instruments_id.qm
       instruments_it.qm
       instruments_ja.qm
@@ -151,6 +156,7 @@ install(FILES
       instruments_ko.qm
       instruments_lt.qm
       instruments_lv.qm
+      instruments_ml.qm
       instruments_mn_MN.qm
       instruments_nl.qm
       instruments_nb.qm

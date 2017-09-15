@@ -16,15 +16,13 @@
 #include "element.h"
 #include "durationtype.h"
 
-class QPainter;
-
 namespace Ms {
 
 class ChordRest;
 class MuseScoreView;
 class Chord;
 class System;
-enum class SpannerSegmentType : char;
+enum class SpannerSegmentType;
 
 struct BeamFragment;
 
@@ -33,7 +31,7 @@ struct BeamFragment;
 //---------------------------------------------------------
 
 class Beam : public Element {
-      Q_OBJECT
+      Q_GADGET
 
       QVector<ChordRest*> _elements;        // must be sorted by tick
       QVector<QLineF*> beamSegments;
@@ -42,7 +40,7 @@ class Beam : public Element {
       bool _up;
       bool _distribute;                   // equal spacing of elements
       bool _noSlope;
-      PropertyStyle noSlopeStyle;
+      PropertyFlags noSlopeStyle;
 
       bool _userModified[2];              // 0: auto/down  1: up
       bool _isGrace;
@@ -61,7 +59,6 @@ class Beam : public Element {
       TDuration maxDuration;
       qreal slope { 0.0 };
 
-      int editFragment;       // valid in edit mode
 
       void layout2(std::vector<ChordRest*>, SpannerSegmentType, int frag);
       bool twoBeamedNotes();
@@ -81,18 +78,20 @@ class Beam : public Element {
       Beam(const Beam&);
       ~Beam();
       virtual Beam* clone() const override         { return new Beam(*this); }
-      virtual Element::Type type() const override  { return Element::Type::BEAM; }
+      virtual ElementType type() const override  { return ElementType::BEAM; }
       virtual QPointF pagePos() const override;    ///< position in page coordinates
       virtual QPointF canvasPos() const override;  ///< position in page coordinates
 
       virtual bool isEditable() const override { return true; }
-      virtual void startEdit(MuseScoreView*, const QPointF&) override;
-      virtual void endEdit() override;
-      virtual void editDrag(const EditData&) override;
-      virtual void updateGrips(Grip*, QVector<QRectF>&) const override;
-      virtual int grips() const override { return 2; }
+      virtual void startEdit(EditData&) override;
+      virtual void endEdit(EditData&) override;
+      virtual void editDrag(EditData&) override;
+      virtual void updateGrips(EditData&) const override;
 
-      virtual void write(Xml& xml) const override;
+      virtual int tick() const override;
+      virtual int rtick() const override;
+
+      virtual void write(XmlWriter& xml) const override;
       virtual void read(XmlReader&) override;
       virtual void spatiumChanged(qreal /*oldValue*/, qreal /*newValue*/) override;
 
@@ -124,10 +123,8 @@ class Beam : public Element {
       void setBeamDirection(Direction d);
       Direction beamDirection() const     { return _direction; }
 
-      virtual QPainterPath outline() const override;
-      virtual bool contains(const QPointF& p) const override;
-      virtual bool acceptDrop(const DropData&) const override;
-      virtual Element* drop(const DropData&) override;
+      virtual bool acceptDrop(EditData&) const override;
+      virtual Element* drop(EditData&) override;
 
       qreal growLeft() const              { return _grow1; }
       qreal growRight() const             { return _grow2; }
@@ -148,7 +145,7 @@ class Beam : public Element {
       virtual QVariant getProperty(P_ID propertyId) const override;
       virtual bool setProperty(P_ID propertyId, const QVariant&) override;
       virtual QVariant propertyDefault(P_ID id) const override;
-      virtual PropertyStyle propertyStyle(P_ID) const override;
+      virtual PropertyFlags propertyFlags(P_ID) const override;
       virtual void resetProperty(P_ID id) override;
       virtual StyleIdx getPropertyStyle(P_ID) const override;
 

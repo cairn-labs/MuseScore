@@ -16,8 +16,6 @@
 #include "key.h"
 #include "element.h"
 
-class QPainter;
-
 namespace Ms {
 
 class Sym;
@@ -31,7 +29,7 @@ class Segment;
 //---------------------------------------------------------------------------------------
 
 class KeySig : public Element {
-      Q_OBJECT
+      Q_GADGET
       Q_PROPERTY(bool showCourtesy READ showCourtesy   WRITE undoSetShowCourtesy)
 
       bool _showCourtesy;
@@ -44,9 +42,9 @@ class KeySig : public Element {
       KeySig(const KeySig&);
       virtual KeySig* clone() const override       { return new KeySig(*this); }
       virtual void draw(QPainter*) const override;
-      virtual Element::Type type() const override { return Element::Type::KEYSIG; }
-      virtual bool acceptDrop(const DropData&) const override;
-      virtual Element* drop(const DropData&) override;
+      virtual ElementType type() const override { return ElementType::KEYSIG; }
+      virtual bool acceptDrop(EditData&) const override;
+      virtual Element* drop(EditData&) override;
       virtual void layout() override;
       virtual qreal mag() const override;
 
@@ -55,7 +53,7 @@ class KeySig : public Element {
 
       Segment* segment() const            { return (Segment*)parent(); }
       Measure* measure() const            { return parent() ? (Measure*)parent()->parent() : nullptr; }
-      virtual void write(Xml&) const override;
+      virtual void write(XmlWriter&) const override;
       virtual void read(XmlReader&) override;
       //@ returns the key of the key signature (from -7 (flats) to +7 (sharps) )
       Q_INVOKABLE Key key() const         { return _sig.key(); }
@@ -77,8 +75,8 @@ class KeySig : public Element {
       bool setProperty(P_ID propertyId, const QVariant&);
       QVariant propertyDefault(P_ID id) const;
 
-      virtual Element* nextElement() override;
-      virtual Element* prevElement() override;
+      virtual Element* nextSegmentElement() override;
+      virtual Element* prevSegmentElement() override;
       virtual QString accessibleInfo() const override;
 
       SymId convertFromOldId(int val) const;

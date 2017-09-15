@@ -17,7 +17,6 @@
 
 namespace Ms {
 
-
 //---------------------------------------------------------
 //   @@ Marker
 //
@@ -26,7 +25,7 @@ namespace Ms {
 //---------------------------------------------------------
 
 class Marker : public Text {
-      Q_OBJECT
+      Q_GADGET
 
       Q_PROPERTY(QString label               READ label      WRITE undoSetLabel)
       Q_PROPERTY(Ms::Marker::Type markerType READ markerType WRITE undoSetMarkerType)
@@ -44,7 +43,6 @@ class Marker : public Text {
             USER
             };
 
-
    private:
       Type _markerType;
       QString _label;               ///< referenced from Jump() element
@@ -59,13 +57,13 @@ class Marker : public Text {
       QString markerTypeUserName() const;
 
       virtual Marker* clone() const override      { return new Marker(*this); }
-      virtual Element::Type type() const override { return Element::Type::MARKER; }
+      virtual ElementType type() const override { return ElementType::MARKER; }
 
       Measure* measure() const         { return (Measure*)parent(); }
 
       virtual void layout() override;
       virtual void read(XmlReader&) override;
-      virtual void write(Xml& xml) const override;
+      virtual void write(XmlWriter& xml) const override;
 
       QString label() const            { return _label; }
       void setLabel(const QString& s)  { _label = s; }
@@ -80,18 +78,23 @@ class Marker : public Text {
       virtual bool setProperty(P_ID propertyId, const QVariant&) override;
       virtual QVariant propertyDefault(P_ID) const override;
 
-      virtual Element* nextElement() override;
-      virtual Element* prevElement() override;
+      virtual Element* nextSegmentElement() override;
+      virtual Element* prevSegmentElement() override;
       virtual QString accessibleInfo() const override;
       };
 
-typedef struct {
+//---------------------------------------------------------
+//   MarkerTypeItem
+//---------------------------------------------------------
+
+struct MarkerTypeItem {
       Marker::Type type;
       QString name;
-      } MarkerTypeItem;
+      };
 
 extern const MarkerTypeItem markerTypeTable[];
 int markerTypeTableSize();
+
 }     // namespace Ms
 
 Q_DECLARE_METATYPE(Ms::Marker::Type);

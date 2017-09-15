@@ -18,6 +18,8 @@
 
 namespace Ms {
 
+static const int POW_MAX_DOTS = qPow(2, MAX_DOTS);
+
 //---------------------------------------------------------
 //   dots
 //---------------------------------------------------------
@@ -145,6 +147,7 @@ QString TDuration::name() const
             case DurationType::V_LONG:      return "long";
             default:
 qDebug("TDuration::name(): invalid duration type %d", static_cast<int>(_val));
+                 // fall through
             case DurationType::V_ZERO:
             case DurationType::V_INVALID:   return "";
             }
@@ -285,19 +288,41 @@ void TDuration::setType(const QString& s)
 
 //---------------------------------------------------------
 //   shiftType
-//    this keeps any dots
+//    if stepDotted = false, duration type will inc/dec by nSteps with _dots remaining same
+//    if stepDotted = true, duration will round toward zero to next single-dotted or undotted duration and then will included dotted durations when stepping
 //---------------------------------------------------------
 
-void TDuration::shiftType(int v)
+void TDuration::shiftType(int nSteps, bool stepDotted)
       {
       if (_val == DurationType::V_MEASURE || _val == DurationType::V_INVALID || _val == DurationType::V_ZERO)
             setType(DurationType::V_INVALID);
       else {
-            int newValue = int(_val) + v;
-            if ((newValue < int(DurationType::V_LONG)) || (newValue > int(DurationType::V_128TH)))
+            int newValue;
+            int newDots;
+            if (stepDotted) {
+                  // figure out the new duration in terms of the number of single dotted or undotted steps from DurationType::V_LONG
+                  int roundDownSingleDots = (_dots > 0) ? -1 : 0;
+                  int newValAsNumSingleDotSteps = int(_val) * 2 + roundDownSingleDots + nSteps;
+
+                  // convert that new duration back into terms of DurationType integer value and number of dots
+                  newDots = newValAsNumSingleDotSteps % 2; // odd means there is a dot
+                  newValue = newValAsNumSingleDotSteps / 2 + newDots; // if new duration has a dot, then that
+                  }
+            else {
+                  newDots = _dots;
+                  newValue = int(_val) + nSteps;
+                  }
+
+            if ((newValue < int(DurationType::V_LONG)) || (newValue > int(DurationType::V_1024TH)) ||
+                 ((newValue >= int(DurationType::V_1024TH)) && (newDots >= 1)) ||
+                 ((newValue >= int(DurationType::V_512TH))  && (newDots >= 2)) ||
+                 ((newValue >= int(DurationType::V_256TH))  && (newDots >= 3)) ||
+                 ((newValue >= int(DurationType::V_128TH))  && (newDots >= 4)))
                   setType(DurationType::V_INVALID);
-            else
+            else {
                   setType(DurationType(newValue));
+                  setDots(newDots);
+                  }
             }
       }
 
@@ -399,6 +424,9 @@ Fraction TDuration::fraction() const
 // Longest TDuration that fits into Fraction. Must fit exactly if truncate = false.
 TDuration::TDuration(const Fraction& l, bool truncate, int maxDots, DurationType maxType)
       {
+#ifdef NDEBUG
+      Q_UNUSED(truncate);
+#endif
       setType(maxType); // use maxType to avoid testing all types if you know that l is smaller than a certain DurationType
       setDots(maxDots);
       truncateToFraction(l, maxDots);
@@ -788,5 +816,18 @@ void TDuration::setType(DurationType t)
       if (_val == DurationType::V_MEASURE)
             _dots = 0;
       }
+
+//---------------------------------------------------------
+//   isValid
+//---------------------------------------------------------
+
+bool TDuration::isValid(Fraction f)
+     {
+     TDuration t;
+     t.setType(DurationType::V_LONG);
+     t.setDots(4);
+     t.truncateToFraction(f, 4);
+     return ((t.fraction() - f).numerator() == 0);
+     }
 }
 

@@ -38,7 +38,7 @@ static const int DEFAULT_FRETS = 5;
 class FretDiagram : public Element {
 
 #ifdef SCRIPT_INTERFACE
-      Q_OBJECT
+      Q_GADGET
 
       Q_PROPERTY(qreal userMag  READ userMag    WRITE undoSetUserMag)
       Q_PROPERTY(int strings    READ strings    WRITE undoSetStrings)
@@ -85,16 +85,16 @@ class FretDiagram : public Element {
 
       static FretDiagram* fromString(Score* score, const QString &s);
 
-      virtual Element::Type type() const override { return Element::Type::FRET_DIAGRAM; }
+      virtual ElementType type() const override { return ElementType::FRET_DIAGRAM; }
       virtual void layout() override;
-      virtual void write(Xml& xml) const override;
+      virtual void write(XmlWriter& xml) const override;
       virtual void read(XmlReader&) override;
       virtual QLineF dragAnchor() const override;
       virtual QPointF pagePos() const override;
 
       // read / write MusicXML
       void readMusicXML(XmlReader& de);
-      void writeMusicXML(Xml& xml) const;
+      void writeMusicXML(XmlWriter& xml) const;
 
       int strings() const    { return _strings; }
       int frets()   const    { return _frets; }
@@ -122,8 +122,8 @@ class FretDiagram : public Element {
       virtual void add(Element*) override;
       virtual void remove(Element*) override;
 
-      virtual bool acceptDrop(const DropData&) const override;
-      virtual Element* drop(const DropData&) override;
+      virtual bool acceptDrop(EditData&) const override;
+      virtual Element* drop(EditData&) override;
 
       virtual void scanElements(void* data, void (*func)(void*, Element*), bool all=true) override;
 

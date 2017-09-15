@@ -189,7 +189,7 @@ InstrumentTemplate::~InstrumentTemplate()
 //   write
 //---------------------------------------------------------
 
-void InstrumentTemplate::write(Xml& xml) const
+void InstrumentTemplate::write(XmlWriter& xml) const
       {
       xml.stag(QString("Instrument id=\"%1\"").arg(id));
       longNames.write(xml, "longName");
@@ -249,7 +249,7 @@ void InstrumentTemplate::write(Xml& xml) const
                   else
                         xml.tag("bracketSpan", bracketSpan[i]);
                   }
-            if (barlineSpan[i] != 0) {
+            if (barlineSpan[i]) {
                   if (i)
                         xml.tag(QString("barlineSpan staff=\"%1\"").arg(i+1), barlineSpan[i]);
                   else
@@ -291,7 +291,7 @@ void InstrumentTemplate::write(Xml& xml) const
 //    output only translatable names
 //---------------------------------------------------------
 
-void InstrumentTemplate::write1(Xml& xml) const
+void InstrumentTemplate::write1(XmlWriter& xml) const
       {
       xml.stag(QString("Instrument id=\"%1\"").arg(id));
       longNames.write(xml, "longName");
@@ -340,7 +340,8 @@ void InstrumentTemplate::read(XmlReader& e)
             else if (tag == "staves") {
                   staves = e.readInt();
                   bracketSpan[0] = staves;
-                  barlineSpan[0] = staves;
+                  for (int i = 0; i < staves-1; ++i)
+                        barlineSpan[i] = true;
                   }
             else if (tag == "clef") {           // sets both transposing and concert clef
                   int idx = readStaffIdx(e);
@@ -383,7 +384,9 @@ void InstrumentTemplate::read(XmlReader& e)
                   }
             else if (tag == "barlineSpan") {
                   int idx = readStaffIdx(e);
-                  barlineSpan[idx] = e.readInt();
+                  int span = e.readInt();
+                  for (int i = 0; i < span-1; ++i)
+                        barlineSpan[idx+i] = true;
                   }
             else if (tag == "aPitchRange")
                   setPitchRange(e.readElementText(), &minPitchA, &maxPitchA);
@@ -545,7 +548,7 @@ bool saveInstrumentTemplates(const QString& instrTemplates)
             qDebug("cannot save instrument templates at <%s>", qPrintable(instrTemplates));
             return false;
             }
-      Xml xml(&qf);
+      XmlWriter xml(0, &qf);
       xml << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
       xml.stag("museScore");
       foreach(const InstrumentGenre* genre, instrumentGenres)
@@ -582,7 +585,7 @@ bool saveInstrumentTemplates1(const QString& instrTemplates)
             qDebug("cannot save instrument templates at <%s>", qPrintable(instrTemplates));
             return false;
             }
-      Xml xml(&qf);
+      XmlWriter xml(0, &qf);
       xml << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
       xml.stag("museScore");
       foreach(const InstrumentGenre* genre, instrumentGenres)
@@ -614,7 +617,7 @@ bool loadInstrumentTemplates(const QString& instrTemplates)
             return false;
             }
 
-      XmlReader e(&qf);
+      XmlReader e(0, &qf);
       while (e.readNextStartElement()) {
             if (e.name() == "museScore") {
                   while (e.readNextStartElement()) {
@@ -699,14 +702,14 @@ bool InstrumentTemplate::genreMember(const QString& name)
             return rVal;
       }
 
-void InstrumentGenre::write(Xml& xml) const
+void InstrumentGenre::write(XmlWriter& xml) const
       {
       xml.stag(QString("Genre id=\"%1\"").arg(id));
       xml.tag("name", name);
       xml.etag();
       }
 
-void InstrumentGenre::write1(Xml& xml) const
+void InstrumentGenre::write1(XmlWriter& xml) const
       {
       write(xml);
       }

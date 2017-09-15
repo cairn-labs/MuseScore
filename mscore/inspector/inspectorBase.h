@@ -23,12 +23,20 @@ class Inspector;
 class Element;
 
 //---------------------------------------------------------
+//   InspectorPanel
+//---------------------------------------------------------
+
+struct InspectorPanel {
+      QToolButton* title;
+      QWidget* panel;
+      };
+
+//---------------------------------------------------------
 //   InspectorItem
 //---------------------------------------------------------
 
 struct InspectorItem {
       P_ID t;           // property id
-      int sv;           // subvalue; example for P_TYPE::SIZE: 0 - width 1 - height
       int parent;       // apply to parent() element level
       QWidget* w;
       QToolButton* r;   // reset to default button (if any)
@@ -47,6 +55,10 @@ class InspectorBase : public QWidget {
 
       bool dirty() const;
       void checkDifferentValues(const InspectorItem&);
+      bool compareValues(const InspectorItem& ii, QVariant a, QVariant b);
+
+   private slots:
+      void resetToStyle();
 
    protected slots:
       virtual void valueChanged(int idx, bool reset);
@@ -56,17 +68,15 @@ class InspectorBase : public QWidget {
 
    protected:
       std::vector<InspectorItem> iList;
+      std::vector<InspectorPanel> pList;
       QVBoxLayout* _layout;
       Inspector* inspector;
 
       virtual void setValue(const InspectorItem&, QVariant);
       QVariant getValue(const InspectorItem&) const;
       bool isDefault(const InspectorItem&);
-      void mapSignals(const std::vector<InspectorItem>& il = std::vector<InspectorItem>());
+      void mapSignals(const std::vector<InspectorItem>& il = std::vector<InspectorItem>(), const std::vector<InspectorPanel>& pl = std::vector<InspectorPanel>());
       void setupLineStyle(QComboBox*);
-
-   private slots:
-      void resetToStyle();
 
    public:
       InspectorBase(QWidget* parent);

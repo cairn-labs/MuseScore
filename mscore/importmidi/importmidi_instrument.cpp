@@ -398,7 +398,7 @@ void createInstruments(Score *score, QList<MTrack> &tracks)
 
             if (part->nstaves() == 1) {
                   if (track.mtrack->drumTrack()) {
-                        part->staff(0)->setStaffType(StaffType::preset(StaffTypes::PERC_DEFAULT));
+                        part->staff(0)->setStaffType(0, StaffType::preset(StaffTypes::PERC_DEFAULT));
                         if (!instr) {
                               part->instrument()->setDrumset(smDrumset);
                               }
@@ -406,12 +406,12 @@ void createInstruments(Score *score, QList<MTrack> &tracks)
                   }
             else {
                   if (!instr) {
-                        part->staff(0)->setBarLineSpan(2);
-                        part->staff(0)->setBracket(0, BracketType::BRACE);
+                        part->staff(0)->setBarLineSpan(true);
+                        part->staff(0)->setBracketType(0, BracketType::BRACE);
                         }
                   else {
                         part->staff(0)->setBarLineSpan(instr->barlineSpan[0]);
-                        part->staff(0)->setBracket(0, instr->bracket[0]);
+                        part->staff(0)->setBracketType(0, instr->bracket[0]);
                         }
                   part->staff(0)->setBracketSpan(0, 2);
                   }
@@ -419,9 +419,9 @@ void createInstruments(Score *score, QList<MTrack> &tracks)
             if (instr) {
                   for (int i = 0; i != part->nstaves(); ++i) {
                         if (instr->staffTypePreset)
-                              part->staff(i)->setStaffType(instr->staffTypePreset);
-                        part->staff(i)->setLines(instr->staffLines[i]);
-                        part->staff(i)->setSmall(instr->smallStaff[i]);
+                              part->staff(i)->setStaffType(0, instr->staffTypePreset);
+                        part->staff(i)->setLines(0, instr->staffLines[i]);
+                        part->staff(i)->setSmall(0, instr->smallStaff[i]);
                         part->staff(i)->setDefaultClefType(instr->clefTypes[i]);
                         }
                   }
@@ -430,6 +430,16 @@ void createInstruments(Score *score, QList<MTrack> &tracks)
                   if (i > 0)
                         ++idx;
                   tracks[idx].staff = part->staff(i);
+                  }
+
+            // only importing a single volume per track here, skip when multiple volumes
+            // are defined, or the single volume is not defined on tick 0.
+            if (track.volumes.size() == 1) {
+                  for (auto &i: track.volumes) {
+                        if (i.first == ReducedFraction(0, 1)) {
+                              part->instrument()->channel(0)->volume = i.second;
+                              }
+                        }
                   }
 
             score->appendPart(part);

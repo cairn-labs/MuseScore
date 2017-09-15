@@ -15,8 +15,6 @@
 
 #include "element.h"
 
-class QPainter;
-
 namespace Ms {
 
 enum class SymId;
@@ -37,14 +35,14 @@ struct BreathType {
 //---------------------------------------------------------
 
 class Breath : public Element {
-      Q_OBJECT
+      Q_GADGET
 
       qreal _pause;
       SymId _symId;
 
    public:
       Breath(Score* s);
-      virtual Element::Type type() const override { return Element::Type::BREATH; }
+      virtual ElementType type() const override { return ElementType::BREATH; }
       virtual Breath* clone() const override      { return new Breath(*this); }
 
       void setSymId(SymId id)          { _symId = id; }
@@ -56,7 +54,7 @@ class Breath : public Element {
 
       virtual void draw(QPainter*) const override;
       virtual void layout() override;
-      virtual void write(Xml&) const override;
+      virtual void write(XmlWriter&) const override;
       virtual void read(XmlReader&) override;
       virtual QPointF pagePos() const override;      ///< position in page coordinates
 
@@ -64,8 +62,8 @@ class Breath : public Element {
       virtual bool setProperty(P_ID propertyId, const QVariant&) override;
       virtual QVariant propertyDefault(P_ID) const override;
 
-      virtual Element* nextElement() override;
-      virtual Element* prevElement() override;
+      virtual Element* nextSegmentElement() override;
+      virtual Element* prevSegmentElement() override;
       virtual QString accessibleInfo() const override;
 
       bool isCaesura() const;

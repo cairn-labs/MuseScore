@@ -17,8 +17,6 @@
 #include "note.h"
 #include "accidental.h"
 
-class QPainter;
-
 namespace Ms {
 
 //---------------------------------------------------------
@@ -26,7 +24,7 @@ namespace Ms {
 //---------------------------------------------------------
 
 class Ambitus : public Element {
-      Q_OBJECT
+      Q_GADGET
 
       NoteHead::Group     _noteHeadGroup;
       NoteHead::Type      _noteHeadType;
@@ -52,14 +50,14 @@ class Ambitus : public Element {
       void initFrom(Ambitus* a);
 
       // getters and setters
-      virtual Element::Type type() const override     { return Element::Type::AMBITUS;    }
+      virtual ElementType type() const override       { return ElementType::AMBITUS; }
       NoteHead::Group noteHeadGroup() const           { return _noteHeadGroup;}
       NoteHead::Type noteHeadType() const             { return _noteHeadType; }
       MScore::DirectionH direction() const            { return _dir;          }
       bool hasLine() const                            { return _hasLine;      }
       Spatium lineWidth() const                       { return _lineWidth;    }
-      int topOctave() const                           { return _topPitch / 12;}
-      int bottomOctave() const                        { return _bottomPitch / 12;}
+      int topOctave() const                           { return (_topPitch / 12) - 1; }
+      int bottomOctave() const                        { return (_bottomPitch / 12) - 1; }
       int topPitch() const                            { return _topPitch;     }
       int bottomPitch() const                         { return _bottomPitch;  }
       int topTpc() const                              { return _topTpc;       }
@@ -88,18 +86,17 @@ class Ambitus : public Element {
       virtual void      read(XmlReader&) override;
       virtual void      scanElements(void* data, void (*func)(void*, Element*), bool all=true) override;
       virtual void      setTrack(int val) override;
-      virtual void      write(Xml&) const override;
+      virtual void      write(XmlWriter&) const override;
       virtual bool      readProperties(XmlReader&) override;
       virtual QString   accessibleInfo() const override;
-      virtual QString   screenReaderInfo() const override;
 
       // properties
       QVariant getProperty(P_ID ) const;
       bool setProperty(P_ID propertyId, const QVariant&);
       QVariant propertyDefault(P_ID id) const;
 
-      virtual Element* nextElement() override;
-      virtual Element* prevElement() override;
+      virtual Element* nextSegmentElement() override;
+      virtual Element* prevSegmentElement() override;
       };
 
 

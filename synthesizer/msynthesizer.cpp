@@ -23,29 +23,6 @@ namespace Ms {
 extern QString dataPath;
 
 //---------------------------------------------------------
-//   default buildin SynthesizerState
-//    used if synthesizer.xml does not exist or is not
-//    readable
-//---------------------------------------------------------
-
-static SynthesizerState defaultState = {
-      { "master", {
-            { 0, "Zita1" },
-            { 2, "0.1"   },
-            { 3, "440"   }
-            },
-            },
-      { "Fluid", {
-            { 0, "FluidR3Mono_GM.sf3" },
-            },
-            },
-//      { "Zerberus", {
-//            { 0, "SalamanderGrandPiano.sfz" },
-//            },
-//            },
-      };
-
-//---------------------------------------------------------
 //   MasterSynthesizer
 //---------------------------------------------------------
 
@@ -68,7 +45,7 @@ void MasterSynthesizer::init()
             setState(defaultState);
             return;
             }
-      XmlReader e(&f);
+      XmlReader e(0, &f);
       while (e.readNextStartElement()) {
             if (e.name() == "Synthesizer")
                   state.read(e);
