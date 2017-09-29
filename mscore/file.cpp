@@ -2743,9 +2743,12 @@ bool MuseScore::saveSvg(Score* score, const QString& saveName)
                         else { // Draw staff lines once per system
                               StaffLines* firstSL = s->firstMeasure()->staffLines(i)->clone();
                               StaffLines*  lastSL =  s->lastMeasure()->staffLines(i);
+                              qInfo() << QString("First Measure left: %1").arg(firstSL->bbox().left());
+                              qInfo() << QString("Last Measure right: %1").arg(lastSL->bbox().right());
                               firstSL->bbox().setRight(lastSL->bbox().right()
                                                     +  lastSL->pagePos().x()
                                                     - firstSL->pagePos().x());
+                              firstSL->layoutWithoutMeasureWidth();
                               printer.setElement(firstSL);
                               paintElementSvg(p, firstSL);
                               }
