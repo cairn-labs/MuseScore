@@ -2722,7 +2722,7 @@ bool MuseScore::saveSvg(Score* score, const QString& saveName)
                         // In these cases the SVG staff lines for the system/staff
                         // are drawn by measure.
                         //
-                        bool byMeasure = false;
+                        bool byMeasure = true;
                         for (MeasureBase* mb = s->firstMeasure(); mb != 0; mb = s->nextMeasure(mb)) {
                               if (mb->isHBox() || mb->isVBox() || !toMeasure(mb)->visible(i)) {
                                     byMeasure = true;
