@@ -17,6 +17,11 @@
 #include "fraction.h"
 #include "scoreElement.h"
 #include "shape.h"
+#include "property.h"
+
+typedef unsigned char uuid_t[16];
+
+class QPainter;
 
 namespace Ms {
 
@@ -149,6 +154,7 @@ class Element : public ScoreElement {
   protected:
       mutable int _z;
       QColor _color;              ///< element color attribute
+      QString _uuid;
 
   public:
       enum class Placement : char {
@@ -165,6 +171,7 @@ class Element : public ScoreElement {
       mutable QRectF _bbox;       ///< Bounding box relative to _pos + _userOff
                                   ///< valid after call to layout()
       uint _tag;                  ///< tag bitmask
+      void makeUuid(QString* uuidStr);
 
    public:
       Element(Score* s = 0);
@@ -194,6 +201,8 @@ class Element : public ScoreElement {
 
       bool visible() const                    { return flag(ElementFlag::VISIBLE);  }
       virtual void setVisible(bool f)         { setFlag(ElementFlag::VISIBLE, f);   }
+
+      QString uuid() const                    { return _uuid;       }
 
       Placement placement() const             { return _placement;  }
       void setPlacement(Placement val)        { _placement = val;   }
@@ -573,4 +582,3 @@ Q_DECLARE_METATYPE(Ms::ElementType);
 Q_DECLARE_METATYPE(Ms::Element::Placement);
 
 #endif
-

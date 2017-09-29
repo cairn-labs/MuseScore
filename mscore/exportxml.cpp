@@ -1562,8 +1562,9 @@ void ExportMusicXml::timesig(TimeSig* tsig)
       if (!tsig->visible())
             tagName += " print-object=\"no\"";
       tagName += color2xml(tsig);
+      QString tsigUuid = tsig->uuid();
+      tagName += QString(" uuid=\"%1\"").arg(tsigUuid);
       xml.stag(tagName);
-
       QRegExp rx("^\\d+(\\+\\d+)+$"); // matches a compound numerator
       if (rx.exactMatch(ns))
             // if compound numerator, exported as is
@@ -1615,8 +1616,9 @@ void ExportMusicXml::keysig(const KeySig* ks, ClefType ct, int staff, bool visib
             tagName += " print-object=\"no\"";
       tagName += color2xml(ks);
       attr.doAttr(xml, true);
+      QString keySigUuid = ks->uuid();
+      tagName += QString(" uuid=\"%1\"").arg(keySigUuid);
       xml.stag(tagName);
-
       const KeySigEvent kse = ks->keySigEvent();
       const QList<KeySym> keysyms = kse.keySymbols();
       if (kse.custom() && !kse.isAtonal() && keysyms.size() > 0) {
@@ -1671,6 +1673,8 @@ void ExportMusicXml::clef(int staff, const Clef* clef)
             tagName += QString(" number=\"%1\"").arg(staff);
       tagName += color2xml(clef);
       attr.doAttr(xml, true);
+      QString clefUuid = clef->uuid();
+      tagName += QString(" uuid=\"%1\"").arg(clefUuid);
       xml.stag(tagName);
 
       QString sign = ClefInfo::sign(ct);
@@ -2411,6 +2415,9 @@ void ExportMusicXml::chord(Chord* chord, int staff, const std::vector<Lyrics*>* 
 
                   noteTag += QString(" default-x=\"%1\"").arg(QString::number(noteX - measureX,'f',2));
                   noteTag += QString(" default-y=\"%1\"").arg(QString::number(noteY - measureY,'f',2));
+
+                  QString noteUuid = note->uuid();
+                  noteTag += QString(" uuid=\"%1\"").arg(noteUuid);
                   }
 
             if (!note->visible()) {
@@ -5656,4 +5663,3 @@ void ExportMusicXml::harmony(Harmony const* const h, FretDiagram const* const fd
       }
 
 }
-

@@ -101,6 +101,8 @@ public:
 
     void setResolution(int dpi);
     int resolution() const;
+    QString elementUuid() const;
+    void setElementUuid(const QString &elementUuid);
 
     void setElement(const Ms::Element* e);
 

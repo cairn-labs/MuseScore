@@ -84,3 +84,4 @@ xcode_pch(libmscore all)
 
 ADD_DEPENDENCIES(libmscore mops1)
 ADD_DEPENDENCIES(libmscore mops2)
+target_link_libraries (libmscore uuid)

@@ -93,6 +93,43 @@ extern void importSoundfont(QString name);
 extern bool savePositions(Score*, const QString& name, bool segments);
 extern MasterSynthesizer* synti;
 
+    // Additional classes and functions for writing element UUIDs to SVGs.
+
+    class QPainterWithIds : public QPainter {
+    public:
+        QPainterWithIds ( SvgGenerator* device ) : QPainter(device) {
+            device_ = device;
+        }
+
+        void setElementUuid(const QString& uuid) {
+            device_->setElementUuid(uuid);
+        }
+
+    private:
+        SvgGenerator* device_;
+    };
+
+    //---------------------------------------------------------
+    //   paintElement(s)Svg
+    //---------------------------------------------------------
+
+    static void paintElementSvg(QPainterWithIds& p, const Element* e)
+    {
+        QPointF pos(e->pagePos());
+        p.translate(pos);
+        p.setElementUuid(e->uuid());
+        e->draw(&p);
+        p.translate(-pos);
+    }
+
+    static void paintElementsSvg(QPainterWithIds& p, const QList<Element*>& el)
+    {
+        for (Element* e : el) {
+            if (!e->visible())
+                continue;
+            paintElementSvg(p, e);
+        }
+    }
 //---------------------------------------------------------
 //   paintElement(s)
 //---------------------------------------------------------
@@ -2657,7 +2694,7 @@ bool MuseScore::saveSvg(Score* score, const QString& saveName)
             qreal h = r.height();
             printer.setSize(QSize(w, h));
             printer.setViewBox(QRectF(0, 0, w, h));
-            QPainter p(&printer);
+            QPainterWithIds p(&printer);
             p.setRenderHint(QPainter::Antialiasing, true);
             p.setRenderHint(QPainter::TextAntialiasing, true);
             if (trimMargin >= 0 && score->npages() == 1)
@@ -2699,18 +2736,21 @@ bool MuseScore::saveSvg(Score* score, const QString& saveName)
                                      && static_cast<Measure*>(mb)->visible(i)) {
                                           StaffLines* sl = toMeasure(mb)->staffLines(i);
                                           printer.setElement(sl);
-                                          paintElement(p, sl);
+                                          paintElementSvg(p, sl);
                                           }
                                     }
                               }
                         else { // Draw staff lines once per system
                               StaffLines* firstSL = s->firstMeasure()->staffLines(i)->clone();
                               StaffLines*  lastSL =  s->lastMeasure()->staffLines(i);
+                              qInfo() << QString("First Measure left: %1").arg(firstSL->bbox().left());
+                              qInfo() << QString("Last Measure right: %1").arg(lastSL->bbox().right());
                               firstSL->bbox().setRight(lastSL->bbox().right()
                                                     +  lastSL->pagePos().x()
                                                     - firstSL->pagePos().x());
+                              firstSL->layoutWithoutMeasureWidth();
                               printer.setElement(firstSL);
-                              paintElement(p, firstSL);
+                              paintElementSvg(p, firstSL);
                               }
                         }
                   }
@@ -2736,7 +2776,7 @@ bool MuseScore::saveSvg(Score* score, const QString& saveName)
                   printer.setElement(e);
 
                   // Paint it
-                  paintElement(p, e);
+                  paintElementSvg(p, e);
                   }
             p.end(); // Writes MuseScore SVG file to disk, finally
             }
@@ -2789,4 +2829,3 @@ QPixmap MuseScore::extractThumbnail(const QString& name)
       }
 
 }
-
