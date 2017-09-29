@@ -2722,7 +2722,7 @@ bool MuseScore::saveSvg(Score* score, const QString& saveName)
                         // In these cases the SVG staff lines for the system/staff
                         // are drawn by measure.
                         //
-                        bool byMeasure = true;
+                        bool byMeasure = false;
                         for (MeasureBase* mb = s->firstMeasure(); mb != 0; mb = s->nextMeasure(mb)) {
                               if (mb->isHBox() || mb->isVBox() || !toMeasure(mb)->visible(i)) {
                                     byMeasure = true;
@@ -2743,9 +2743,12 @@ bool MuseScore::saveSvg(Score* score, const QString& saveName)
                         else { // Draw staff lines once per system
                               StaffLines* firstSL = s->firstMeasure()->staffLines(i)->clone();
                               StaffLines*  lastSL =  s->lastMeasure()->staffLines(i);
+                              qInfo() << QString("First Measure left: %1").arg(firstSL->bbox().left());
+                              qInfo() << QString("Last Measure right: %1").arg(lastSL->bbox().right());
                               firstSL->bbox().setRight(lastSL->bbox().right()
                                                     +  lastSL->pagePos().x()
                                                     - firstSL->pagePos().x());
+                              firstSL->layoutWithoutMeasureWidth();
                               printer.setElement(firstSL);
                               paintElementSvg(p, firstSL);
                               }
