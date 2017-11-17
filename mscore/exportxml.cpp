@@ -4266,7 +4266,7 @@ void ExportMusicXml::keysigTimesig(const Measure* m, const Part* p)
             // determine if all staves have a keysig and all keysigs are identical
             // in that case a single <key> is written, without number=... attribute
             int nstaves = p->nstaves();
-            bool singleKey = true;
+            bool singleKey = false;
             // check if all staves have a keysig
             for (int i = 0; i < nstaves; i++)
                   if (!keysigs.contains(i))
