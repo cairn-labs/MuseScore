@@ -290,7 +290,7 @@ class ExportMusicXml {
       void chord(Chord* chord, int staff, const std::vector<Lyrics*>* ll, bool useDrumset);
       void rest(Rest* chord, int staff);
       void clef(int staff, const Clef* clef);
-      void timesig(TimeSig* tsig);
+      void timesig(TimeSig* tsig, int staff = 0);
       void keysig(const KeySig* ks, ClefType ct, int staff = 0, bool visible = true);
       void barlineLeft(Measure* m);
       void barlineRight(Measure* m);
@@ -1545,7 +1545,7 @@ void ExportMusicXml::moveToTick(int t)
 //   timesig
 //---------------------------------------------------------
 
-void ExportMusicXml::timesig(TimeSig* tsig)
+void ExportMusicXml::timesig(TimeSig* tsig, int staff)
       {
       TimeSigType st = tsig->timeSigType();
       Fraction ts = tsig->sig();
@@ -1555,6 +1555,8 @@ void ExportMusicXml::timesig(TimeSig* tsig)
 
       attr.doAttr(xml, true);
       QString tagName = "time";
+      if (staff)
+            tagName += QString(" number=\"%1\"").arg(staff);
       if (st == TimeSigType::FOUR_FOUR)
             tagName += " symbol=\"common\"";
       else if (st == TimeSigType::ALLA_BREVE)
@@ -4301,16 +4303,25 @@ void ExportMusicXml::keysigTimesig(const Measure* m, const Part* p)
                   }
             }
 
-      TimeSig* tsig = 0;
+      QMap<int, TimeSig*> timesigs;
       for (Segment* seg = m->first(); seg; seg = seg->next()) {
-            if (seg->tick() > m->tick())
-                  break;
-            Element* el = seg->element(strack);
-            if (el && el->type() == ElementType::TIMESIG)
-                  tsig = (TimeSig*) el;
-            }
-      if (tsig)
-            timesig(tsig);
+          if (seg->tick() > m->tick())
+              break;
+          for (int t = strack; t < etrack; t += VOICES) {
+              Element *el = seg->element(t);
+              if (!el)
+                  continue;
+              if (el->type() == ElementType::TIMESIG) {
+                  //qDebug(" found keysig %p track %d", el, el->track());
+                  int st = (t - strack) / VOICES;
+                  if (!el->generated())
+                      timesigs[st] = static_cast<TimeSig *>(el);
+              }
+          }
+      }
+      for (int st : timesigs.keys()){
+              timesig(timesigs.value(st), st + 1);
+      }
       }
 
 //---------------------------------------------------------
